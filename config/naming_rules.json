@@ -1,0 +1,20 @@
+{
+  "RequiredGeometrySet": "GS_DRAWING_INFO",
+  "RequiredMarkers": [
+    "MAIN_VIEW_PLANE",
+    "TOP_DIRECTION"
+  ],
+  "OptionalMarkerPrefixes": [
+    "MATCHING_FACE_",
+    "ASSEMBLY_FACE_",
+    "SECTION_",
+    "DETAIL_"
+  ],
+  "ParameterNames": {
+    "PartNumber": "PART_NO",
+    "PartName": "PART_NAME",
+    "Material": "MATERIAL",
+    "Revision": "REVISION",
+    "Designer": "DESIGNER"
+  }
+}
