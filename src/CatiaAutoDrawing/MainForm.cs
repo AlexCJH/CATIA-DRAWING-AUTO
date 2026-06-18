@@ -1,6 +1,7 @@
 using System;
 using System.Windows.Forms;
 using CatiaAutoDrawing.CatiaConnection;
+using CatiaAutoDrawing.DrawingGenerator;
 using CatiaAutoDrawing.Logging;
 using CatiaAutoDrawing.ModelInspector;
 
@@ -17,6 +18,7 @@ public partial class MainForm : Form
 {
     private readonly ICatiaConnectionService _catiaConnectionService;
     private readonly IModelInspector _modelInspector;
+    private readonly IDrawingGenerator _drawingGenerator;
     private readonly ILogger _logger;
 
     public MainForm()
@@ -26,6 +28,7 @@ public partial class MainForm : Form
         _logger = new FileLogger("logs", AppendLog);
         _catiaConnectionService = new CatiaConnectionService(_logger);
         _modelInspector = new ModelInspector.ModelInspector(_logger);
+        _drawingGenerator = new DrawingGenerator.DrawingGenerator(_logger);
     }
 
     private void CheckConnectionButton_Click(object? sender, EventArgs e)
@@ -65,7 +68,18 @@ public partial class MainForm : Form
 
     private void RunDrawingButton_Click(object? sender, EventArgs e)
     {
-        _logger.Warning("Drawing generation is disabled in the initial architecture phase.");
+        _logger.Info("Drawing generation requested.");
+
+        var result = _drawingGenerator.Generate(new DrawingGenerationContext
+        {
+            OutputFolder = "output",
+            EnablePdfExport = false
+        });
+
+        if (!result.IsSuccess)
+        {
+            _logger.Warning(result.ErrorMessage ?? "Drawing generation failed.");
+        }
     }
 
     private void InspectModelButton_Click(object? sender, EventArgs e)

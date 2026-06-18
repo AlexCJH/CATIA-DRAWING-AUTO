@@ -1,10 +1,12 @@
+using CatiaAutoDrawing.Core;
+
 namespace CatiaAutoDrawing.DrawingGenerator;
 
 /// <summary>
 /// Role: Defines the full drawing generation workflow contract.
-/// TODO: Return Result type after workflow errors are defined.
+/// TODO: Add separate workflow steps only after STEP 3 is validated.
 /// </summary>
 public interface IDrawingGenerator
 {
-    void Generate(DrawingGenerationContext context);
+    Result<string> Generate(DrawingGenerationContext context);
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.5] - STEP 3 CATDrawing Creation
+
+- Implemented new CATDrawing document creation in DrawingGenerator.
+- Added active CATPart validation before drawing creation.
+- Added output folder save flow for generated CATDrawing files.
+- Enabled MainForm drawing generation button.
+
 ## [0.0.4] - STEP 2 Model Marker Inspection
 
 - Implemented active CATPart marker inspection in ModelInspector.

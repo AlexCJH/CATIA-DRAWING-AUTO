@@ -58,7 +58,6 @@ partial class MainForm
         inspectModelButton.UseVisualStyleBackColor = true;
         inspectModelButton.Click += InspectModelButton_Click;
 
-        runDrawingButton.Enabled = false;
         runDrawingButton.Location = new System.Drawing.Point(520, 16);
         runDrawingButton.Name = "runDrawingButton";
         runDrawingButton.Size = new System.Drawing.Size(160, 32);
