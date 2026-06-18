@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.3] - STEP 1 ActiveDocument Read
+
+- Implemented ActiveDocument retrieval in CatiaConnectionService.
+- Added ActiveDocument.Name and ActiveDocument.Type reading.
+- Added CATIA not running, missing ActiveDocument, and COM exception handling.
+
 ## [0.0.2] - STEP 0 CATIA Connection Check
 
 - Implemented running CATIA V5 COM connection check in CatiaConnectionService.

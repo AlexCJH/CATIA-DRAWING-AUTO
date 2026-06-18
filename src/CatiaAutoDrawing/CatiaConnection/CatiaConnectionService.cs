@@ -7,7 +7,7 @@ namespace CatiaAutoDrawing.CatiaConnection;
 
 /// <summary>
 /// Role: Connects to a running CATIA Application and reads ActiveDocument metadata.
-/// TODO: Return an error when ActiveDocument does not exist.
+/// TODO: Add more document metadata only when later MVP steps require it.
 /// </summary>
 public sealed class CatiaConnectionService : ICatiaConnectionService
 {
@@ -28,10 +28,12 @@ public sealed class CatiaConnectionService : ICatiaConnectionService
 
         if (!result.IsSuccess)
         {
-            _logger.Error(result.ErrorMessage ?? "CATIA connection failed.");
-            return result;
+            var message = result.ErrorMessage ?? "CATIA connection failed.";
+            _logger.Error(message);
+            return Result.Failure(message);
         }
 
+        ReleaseComObject(result.Value);
         _logger.Info("CATIA connection check succeeded.");
         return Result.Success();
     }
@@ -39,39 +41,114 @@ public sealed class CatiaConnectionService : ICatiaConnectionService
     public Result<CatiaDocumentInfo> GetActiveDocumentInfo()
     {
         _logger.Info("ActiveDocument read started.");
-        return Result<CatiaDocumentInfo>.Failure("TODO: ActiveDocument read is not implemented yet.");
+
+        object? catiaApplication = null;
+        object? activeDocument = null;
+
+        try
+        {
+            var catiaResult = TryGetRunningCatiaApplication();
+            if (!catiaResult.IsSuccess || catiaResult.Value is null)
+            {
+                var message = catiaResult.ErrorMessage ?? "CATIA V5 is not running.";
+                _logger.Error(message);
+                return Result<CatiaDocumentInfo>.Failure(message);
+            }
+
+            catiaApplication = catiaResult.Value;
+            activeDocument = GetComProperty(catiaApplication, "ActiveDocument");
+
+            if (activeDocument is null)
+            {
+                const string message = "CATIA ActiveDocument does not exist.";
+                _logger.Error(message);
+                return Result<CatiaDocumentInfo>.Failure(message);
+            }
+
+            var documentName = Convert.ToString(GetComProperty(activeDocument, "Name")) ?? string.Empty;
+            var documentType = Convert.ToString(GetComProperty(activeDocument, "Type")) ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(documentName))
+            {
+                const string message = "CATIA ActiveDocument.Name is empty.";
+                _logger.Error(message);
+                return Result<CatiaDocumentInfo>.Failure(message);
+            }
+
+            if (string.IsNullOrWhiteSpace(documentType))
+            {
+                const string message = "CATIA ActiveDocument.Type is empty.";
+                _logger.Error(message);
+                return Result<CatiaDocumentInfo>.Failure(message);
+            }
+
+            _logger.Info($"Active document name: {documentName}");
+            _logger.Info($"Document type: {documentType}");
+
+            return Result<CatiaDocumentInfo>.Success(new CatiaDocumentInfo(documentName, documentType));
+        }
+        catch (COMException ex)
+        {
+            var message = $"ActiveDocument read failed. COM error: 0x{ex.ErrorCode:X8}";
+            _logger.Error(message);
+            return Result<CatiaDocumentInfo>.Failure(message);
+        }
+        catch (Exception ex)
+        {
+            var message = $"ActiveDocument read failed: {ex.Message}";
+            _logger.Error(message);
+            return Result<CatiaDocumentInfo>.Failure(message);
+        }
+        finally
+        {
+            ReleaseComObject(activeDocument);
+            ReleaseComObject(catiaApplication);
+        }
     }
 
-    private Result TryGetRunningCatiaApplication()
+    private Result<object> TryGetRunningCatiaApplication()
     {
         try
         {
             var clsidResult = CLSIDFromProgID(CatiaApplicationProgId, out var clsid);
             if (clsidResult < 0)
             {
-                return Result.Failure($"CATIA COM ProgID not found: {CatiaApplicationProgId}");
+                return Result<object>.Failure($"CATIA COM ProgID not found: {CatiaApplicationProgId}");
             }
 
             GetActiveObject(ref clsid, IntPtr.Zero, out var catiaApplication);
             if (catiaApplication is null)
             {
-                return Result.Failure("CATIA V5 is not running.");
+                return Result<object>.Failure("CATIA V5 is not running.");
             }
 
-            if (Marshal.IsComObject(catiaApplication))
-            {
-                Marshal.ReleaseComObject(catiaApplication);
-            }
-
-            return Result.Success();
+            return Result<object>.Success(catiaApplication);
         }
         catch (COMException ex)
         {
-            return Result.Failure($"CATIA V5 is not running or cannot be accessed. COM error: 0x{ex.ErrorCode:X8}");
+            return Result<object>.Failure($"CATIA V5 is not running or cannot be accessed. COM error: 0x{ex.ErrorCode:X8}");
         }
         catch (Exception ex)
         {
-            return Result.Failure($"CATIA connection check failed: {ex.Message}");
+            return Result<object>.Failure($"CATIA connection check failed: {ex.Message}");
+        }
+    }
+
+    private static object? GetComProperty(object comObject, string propertyName)
+    {
+        return comObject.GetType().InvokeMember(
+            propertyName,
+            System.Reflection.BindingFlags.GetProperty,
+            binder: null,
+            target: comObject,
+            args: null);
+    }
+
+    private static void ReleaseComObject(object? comObject)
+    {
+        if (comObject is not null && Marshal.IsComObject(comObject))
+        {
+            Marshal.ReleaseComObject(comObject);
         }
     }
 

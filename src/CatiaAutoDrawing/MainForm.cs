@@ -8,7 +8,7 @@ namespace CatiaAutoDrawing;
 /// <summary>
 /// Role: Minimal user interface for CATIA connection checks, active document display, and log output.
 /// TODO: Connect CATIA connection check button to a verified COM implementation.
-/// TODO: Connect ActiveDocument read feature after CATIA connection service is implemented.
+/// TODO: Keep ActiveDocument handling limited to service result display.
 /// TODO: Keep drawing generation button disabled until MVP steps are complete.
 /// Warning: Do not call CATIA COM API directly from this form.
 /// </summary>
