@@ -29,12 +29,17 @@ public partial class MainForm : Form
     {
         _logger.Info("CATIA connection check requested.");
         var result = _catiaConnectionService.CheckConnection();
-        connectionStatusLabel.Text = result.IsSuccess ? "CATIA connection: Ready" : "CATIA connection: Not implemented";
 
-        if (!result.IsSuccess)
+        if (result.IsSuccess)
         {
-            _logger.Warning(result.ErrorMessage ?? "CATIA connection check is not available.");
+            connectionStatusLabel.Text = "CATIA connection: Connected";
+            _logger.Info("CATIA connection status displayed as connected.");
+            return;
         }
+
+        var message = result.ErrorMessage ?? "CATIA connection failed.";
+        connectionStatusLabel.Text = $"CATIA connection: Failed - {message}";
+        _logger.Warning(message);
     }
 
     private void ReadActiveDocumentButton_Click(object? sender, EventArgs e)
