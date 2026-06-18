@@ -2,6 +2,7 @@ using System;
 using System.Windows.Forms;
 using CatiaAutoDrawing.CatiaConnection;
 using CatiaAutoDrawing.Logging;
+using CatiaAutoDrawing.ModelInspector;
 
 namespace CatiaAutoDrawing;
 
@@ -15,6 +16,7 @@ namespace CatiaAutoDrawing;
 public partial class MainForm : Form
 {
     private readonly ICatiaConnectionService _catiaConnectionService;
+    private readonly IModelInspector _modelInspector;
     private readonly ILogger _logger;
 
     public MainForm()
@@ -23,6 +25,7 @@ public partial class MainForm : Form
 
         _logger = new FileLogger("logs", AppendLog);
         _catiaConnectionService = new CatiaConnectionService(_logger);
+        _modelInspector = new ModelInspector.ModelInspector(_logger);
     }
 
     private void CheckConnectionButton_Click(object? sender, EventArgs e)
@@ -64,6 +67,24 @@ public partial class MainForm : Form
     {
         _logger.Warning("Drawing generation is disabled in the initial architecture phase.");
     }
+
+    private void InspectModelButton_Click(object? sender, EventArgs e)
+    {
+        var result = _modelInspector.InspectActiveDocument();
+
+        if (result.IsSuccess && result.Value is not null)
+        {
+            modelInspectionStatusLabel.Text =
+                $"Model inspection: GS={FormatFound(result.Value.HasRequiredGeometrySet)}, " +
+                $"MAIN_VIEW_PLANE={FormatFound(result.Value.HasMainViewPlane)}, " +
+                $"TOP_DIRECTION={FormatFound(result.Value.HasTopDirection)}";
+            return;
+        }
+
+        modelInspectionStatusLabel.Text = $"Model inspection: Failed - {result.ErrorMessage}";
+    }
+
+    private static string FormatFound(bool found) => found ? "Found" : "Missing";
 
     private void AppendLog(string message)
     {

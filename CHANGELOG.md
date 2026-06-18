@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.4] - STEP 2 Model Marker Inspection
+
+- Implemented active CATPart marker inspection in ModelInspector.
+- Added checks for GS_DRAWING_INFO, MAIN_VIEW_PLANE, and TOP_DIRECTION.
+- Added minimal UI trigger and status display for model inspection.
+
 ## [0.0.3] - STEP 1 ActiveDocument Read
 
 - Implemented ActiveDocument retrieval in CatiaConnectionService.

@@ -10,23 +10,27 @@ partial class MainForm
 {
     private Button checkConnectionButton = null!;
     private Button readActiveDocumentButton = null!;
+    private Button inspectModelButton = null!;
     private Button runDrawingButton = null!;
     private CheckBox enablePdfExportCheckBox = null!;
     private TextBox logTextBox = null!;
     private Label connectionStatusLabel = null!;
     private Label activeDocumentNameLabel = null!;
     private Label activeDocumentTypeLabel = null!;
+    private Label modelInspectionStatusLabel = null!;
 
     private void InitializeComponent()
     {
         checkConnectionButton = new Button();
         readActiveDocumentButton = new Button();
+        inspectModelButton = new Button();
         runDrawingButton = new Button();
         enablePdfExportCheckBox = new CheckBox();
         logTextBox = new TextBox();
         connectionStatusLabel = new Label();
         activeDocumentNameLabel = new Label();
         activeDocumentTypeLabel = new Label();
+        modelInspectionStatusLabel = new Label();
 
         SuspendLayout();
 
@@ -34,7 +38,7 @@ partial class MainForm
         checkConnectionButton.Name = "checkConnectionButton";
         checkConnectionButton.Size = new System.Drawing.Size(160, 32);
         checkConnectionButton.TabIndex = 0;
-        checkConnectionButton.Text = "CATIA 연결 확인";
+        checkConnectionButton.Text = "CATIA connection";
         checkConnectionButton.UseVisualStyleBackColor = true;
         checkConnectionButton.Click += CheckConnectionButton_Click;
 
@@ -42,27 +46,26 @@ partial class MainForm
         readActiveDocumentButton.Name = "readActiveDocumentButton";
         readActiveDocumentButton.Size = new System.Drawing.Size(160, 32);
         readActiveDocumentButton.TabIndex = 1;
-        readActiveDocumentButton.Text = "활성 문서 읽기";
+        readActiveDocumentButton.Text = "Read active document";
         readActiveDocumentButton.UseVisualStyleBackColor = true;
         readActiveDocumentButton.Click += ReadActiveDocumentButton_Click;
 
+        inspectModelButton.Location = new System.Drawing.Point(352, 16);
+        inspectModelButton.Name = "inspectModelButton";
+        inspectModelButton.Size = new System.Drawing.Size(160, 32);
+        inspectModelButton.TabIndex = 2;
+        inspectModelButton.Text = "Inspect model";
+        inspectModelButton.UseVisualStyleBackColor = true;
+        inspectModelButton.Click += InspectModelButton_Click;
+
         runDrawingButton.Enabled = false;
-        runDrawingButton.Location = new System.Drawing.Point(352, 16);
+        runDrawingButton.Location = new System.Drawing.Point(520, 16);
         runDrawingButton.Name = "runDrawingButton";
         runDrawingButton.Size = new System.Drawing.Size(160, 32);
-        runDrawingButton.TabIndex = 2;
-        runDrawingButton.Text = "도면 생성 실행";
+        runDrawingButton.TabIndex = 3;
+        runDrawingButton.Text = "Run drawing";
         runDrawingButton.UseVisualStyleBackColor = true;
         runDrawingButton.Click += RunDrawingButton_Click;
-
-        enablePdfExportCheckBox.AutoSize = true;
-        enablePdfExportCheckBox.Enabled = false;
-        enablePdfExportCheckBox.Location = new System.Drawing.Point(528, 23);
-        enablePdfExportCheckBox.Name = "enablePdfExportCheckBox";
-        enablePdfExportCheckBox.Size = new System.Drawing.Size(74, 19);
-        enablePdfExportCheckBox.TabIndex = 3;
-        enablePdfExportCheckBox.Text = "PDF 출력";
-        enablePdfExportCheckBox.UseVisualStyleBackColor = true;
 
         connectionStatusLabel.AutoSize = true;
         connectionStatusLabel.Location = new System.Drawing.Point(16, 68);
@@ -85,29 +88,47 @@ partial class MainForm
         activeDocumentTypeLabel.TabIndex = 6;
         activeDocumentTypeLabel.Text = "Document type: -";
 
+        modelInspectionStatusLabel.AutoSize = true;
+        modelInspectionStatusLabel.Location = new System.Drawing.Point(16, 152);
+        modelInspectionStatusLabel.Name = "modelInspectionStatusLabel";
+        modelInspectionStatusLabel.Size = new System.Drawing.Size(112, 15);
+        modelInspectionStatusLabel.TabIndex = 7;
+        modelInspectionStatusLabel.Text = "Model inspection: -";
+
+        enablePdfExportCheckBox.AutoSize = true;
+        enablePdfExportCheckBox.Enabled = false;
+        enablePdfExportCheckBox.Location = new System.Drawing.Point(16, 176);
+        enablePdfExportCheckBox.Name = "enablePdfExportCheckBox";
+        enablePdfExportCheckBox.Size = new System.Drawing.Size(82, 19);
+        enablePdfExportCheckBox.TabIndex = 8;
+        enablePdfExportCheckBox.Text = "PDF export";
+        enablePdfExportCheckBox.UseVisualStyleBackColor = true;
+
         logTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-        logTextBox.Location = new System.Drawing.Point(16, 160);
+        logTextBox.Location = new System.Drawing.Point(16, 208);
         logTextBox.Multiline = true;
         logTextBox.Name = "logTextBox";
         logTextBox.ReadOnly = true;
         logTextBox.ScrollBars = ScrollBars.Vertical;
-        logTextBox.Size = new System.Drawing.Size(656, 288);
-        logTextBox.TabIndex = 7;
+        logTextBox.Size = new System.Drawing.Size(664, 240);
+        logTextBox.TabIndex = 9;
 
         AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
-        ClientSize = new System.Drawing.Size(688, 464);
+        ClientSize = new System.Drawing.Size(696, 464);
         Controls.Add(logTextBox);
+        Controls.Add(enablePdfExportCheckBox);
+        Controls.Add(modelInspectionStatusLabel);
         Controls.Add(activeDocumentTypeLabel);
         Controls.Add(activeDocumentNameLabel);
         Controls.Add(connectionStatusLabel);
-        Controls.Add(enablePdfExportCheckBox);
         Controls.Add(runDrawingButton);
+        Controls.Add(inspectModelButton);
         Controls.Add(readActiveDocumentButton);
         Controls.Add(checkConnectionButton);
-        MinimumSize = new System.Drawing.Size(704, 503);
+        MinimumSize = new System.Drawing.Size(712, 503);
         Name = "MainForm";
-        Text = "CATIA V5 R35 자동도면 생성기";
+        Text = "CATIA V5 R35 Auto Drawing Generator";
         ResumeLayout(false);
         PerformLayout();
     }

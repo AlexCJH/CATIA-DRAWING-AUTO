@@ -8,5 +8,6 @@ namespace CatiaAutoDrawing.ModelInspector;
 /// </summary>
 public interface IModelInspector
 {
+    Result<InspectionReport> InspectActiveDocument();
     Result<InspectionReport> Inspect(object catiaDocument);
 }
