@@ -66,7 +66,6 @@ public sealed class CatiaConnectionService : ICatiaConnectionService
             }
 
             var documentName = Convert.ToString(GetComProperty(activeDocument, "Name")) ?? string.Empty;
-            var documentType = Convert.ToString(GetComProperty(activeDocument, "Type")) ?? string.Empty;
 
             if (string.IsNullOrWhiteSpace(documentName))
             {
@@ -75,12 +74,7 @@ public sealed class CatiaConnectionService : ICatiaConnectionService
                 return Result<CatiaDocumentInfo>.Failure(message);
             }
 
-            if (string.IsNullOrWhiteSpace(documentType))
-            {
-                const string message = "CATIA ActiveDocument.Type is empty.";
-                _logger.Error(message);
-                return Result<CatiaDocumentInfo>.Failure(message);
-            }
+            var documentType = GetDocumentTypeFromName(documentName);
 
             _logger.Info($"Active document name: {documentName}");
             _logger.Info($"Document type: {documentType}");
@@ -142,6 +136,26 @@ public sealed class CatiaConnectionService : ICatiaConnectionService
             binder: null,
             target: comObject,
             args: null);
+    }
+
+    private static string GetDocumentTypeFromName(string documentName)
+    {
+        if (documentName.EndsWith(".CATPart", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Part";
+        }
+
+        if (documentName.EndsWith(".CATProduct", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Product";
+        }
+
+        if (documentName.EndsWith(".CATDrawing", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Drawing";
+        }
+
+        return "Unknown";
     }
 
     private static void ReleaseComObject(object? comObject)
