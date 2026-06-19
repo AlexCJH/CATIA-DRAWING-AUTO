@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using CatiaAutoDrawing.Core;
 using CatiaAutoDrawing.Logging;
 using CatiaAutoDrawing.Utils;
+using CatiaAutoDrawing.ViewGenerator;
 
 namespace CatiaAutoDrawing.DrawingGenerator;
 
@@ -16,10 +17,17 @@ public sealed class DrawingGenerator : IDrawingGenerator
     private const string CatiaApplicationProgId = "CATIA.Application";
 
     private readonly ILogger _logger;
+    private readonly IViewGenerator _viewGenerator;
 
     public DrawingGenerator(ILogger logger)
+        : this(logger, new ViewGenerator.ViewGenerator(logger))
+    {
+    }
+
+    public DrawingGenerator(ILogger logger, IViewGenerator viewGenerator)
     {
         _logger = logger;
+        _viewGenerator = viewGenerator;
     }
 
     public Result<string> Generate(DrawingGenerationContext context)
@@ -104,6 +112,8 @@ public sealed class DrawingGenerator : IDrawingGenerator
 
             _logger.Info("Drawing template opened.");
 
+            var frontViewResult = _viewGenerator.GenerateFrontView(drawingDocument, activeDocument);
+
             var outputFolder = ResolveOutputFolder(context.OutputFolder);
             Directory.CreateDirectory(outputFolder);
 
@@ -115,7 +125,15 @@ public sealed class DrawingGenerator : IDrawingGenerator
             InvokeComMethod(drawingDocument, "SaveAs", drawingPath);
 
             _logger.Info("Drawing template copy saved.");
-            _logger.Info("STEP 3 succeeded.");
+
+            if (!frontViewResult.IsSuccess)
+            {
+                var message = frontViewResult.ErrorMessage ?? "Front view generation failed.";
+                _logger.Warning("STEP 4 failed, but drawing template copy was saved.");
+                return Result<string>.Failure(message);
+            }
+
+            _logger.Info("STEP 4 succeeded.");
 
             return Result<string>.Success(drawingPath);
         }

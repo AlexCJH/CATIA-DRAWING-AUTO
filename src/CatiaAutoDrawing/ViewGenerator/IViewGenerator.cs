@@ -1,3 +1,5 @@
+using CatiaAutoDrawing.Core;
+
 namespace CatiaAutoDrawing.ViewGenerator;
 
 /// <summary>
@@ -7,4 +9,5 @@ namespace CatiaAutoDrawing.ViewGenerator;
 public interface IViewGenerator
 {
     ViewLayoutPlan CreateLayoutPlan(object catiaDocument);
+    Result GenerateFrontView(object drawingDocument, object sourceDocument);
 }

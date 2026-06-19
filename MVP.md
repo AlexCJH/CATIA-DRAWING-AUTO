@@ -7,6 +7,7 @@ STEP 0: CATIA 실행 여부 확인
 STEP 1: 활성 문서 이름 읽기
 STEP 2: 활성 문서 표식 확인
 STEP 3: CATDrawing 템플릿 열기 및 SaveAs 검증
+STEP 4: 템플릿 CATDrawing에 Front View 1개 생성 후 SaveAs
 ```
 
 ## STEP 3: CATDrawing 템플릿 열기 및 SaveAs 검증
@@ -20,11 +21,26 @@ STEP 3: CATDrawing 템플릿 열기 및 SaveAs 검증
 5. `output` 폴더에 `활성문서명_도면사이즈.CATDrawing`으로 `SaveAs`
 6. 로그 출력
 
-## STEP 3 제외 항목
+## STEP 4: 템플릿 CATDrawing에 Front View 1개 생성 후 SaveAs
+
+목표:
+
+1. CATIA 연결
+2. 활성 CATPart 또는 CATProduct 확인
+3. 템플릿 CATDrawing 열기
+4. 첫 번째 Sheet 획득
+5. 활성 CATPart 또는 CATProduct 기준 Front View 1개 생성 시도
+6. View 이름을 `FRONT_VIEW`로 설정
+7. View 위치를 Sheet 중앙 근처 임시 좌표로 배치
+8. Scale을 `1.0`으로 설정
+9. `output` 폴더에 CATDrawing `SaveAs`
+10. 로그 출력
+
+## STEP 4 제외 항목
 
 ```text
-- 새 빈 CATDrawing 생성
-- View 생성
+- MAIN_VIEW_PLANE 기준 방향 적용
+- TOP_DIRECTION 적용
 - Projection View 생성
 - Detail View 생성
 - Section View 생성

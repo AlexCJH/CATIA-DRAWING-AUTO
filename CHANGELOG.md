@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.8] - STEP 4 Front View Generation
+
+- Added STEP 4 scope for creating one Front View on the opened template CATDrawing.
+- Implemented Front View creation in ViewGenerator and kept DrawingGenerator as the workflow coordinator.
+- Saved the template copy after the Front View attempt and separated Front View failure logs from SaveAs logs.
+
 ## [0.0.7] - STEP 3 Template Open Diagnostics
 
 - Added detailed pre-open diagnostics for CATDrawing templates.
