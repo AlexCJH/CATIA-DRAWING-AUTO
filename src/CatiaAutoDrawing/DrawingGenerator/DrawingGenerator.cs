@@ -112,7 +112,11 @@ public sealed class DrawingGenerator : IDrawingGenerator
 
             _logger.Info("Drawing template opened.");
 
-            var frontViewResult = _viewGenerator.GenerateFrontView(drawingDocument, activeDocument);
+            var frontViewResult = _viewGenerator.GenerateFrontView(
+                drawingDocument,
+                activeDocument,
+                context.FrontViewDirection,
+                context.TopDirection);
 
             var outputFolder = ResolveOutputFolder(context.OutputFolder);
             Directory.CreateDirectory(outputFolder);

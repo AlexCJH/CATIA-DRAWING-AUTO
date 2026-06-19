@@ -64,8 +64,13 @@ templates/STD_A1_TEMPLATE.CATDrawing
 4. 기준 Plane 및 Direction 검사
 5. 회사 표준 CATDrawing 템플릿 열기 및 SaveAs
 6. 열린 템플릿 도면에 Front View 추가
-7. Projection View 추가
-8. Detail / Section View 추가
-9. 치수 생성
-10. 표제란 입력
-11. 저장 및 PDF 출력
+7. STEP 4-1A: Front View 방향을 수동 선택값으로 지정하는 방식 검증
+8. Projection View 추가
+9. Detail / Section View 추가
+10. 치수 생성
+11. 표제란 입력
+12. 저장 및 PDF 출력
+
+## STEP 4-1A 방향
+
+STEP 4-1A는 `MAIN_VIEW_PLANE` / `TOP_DIRECTION` 자동 해석을 구현하지 않는다. 사용자가 UI에서 선택한 Front View Direction과 Top Direction을 벡터로 변환해 CATIA Front View 방향 지정 API 동작을 검증한다.

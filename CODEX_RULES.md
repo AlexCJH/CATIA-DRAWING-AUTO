@@ -16,5 +16,6 @@
 - 회사 표준 CATDrawing 템플릿 기반 생성 방식을 기본 원칙으로 사용한다.
 - CATDrawing 생성은 반드시 Template Open -> SaveAs 순서로 처리한다.
 - `DrawingGenerator`는 도면 생성 흐름만 담당하고, View 생성은 `ViewGenerator`에 위임한다.
+- View 방향 선택값 변환과 방향 적용 로직은 반드시 `ViewGenerator`에서만 처리한다.
 - CATIA API 호출 실패 시 `TargetInvocationException`의 `InnerException`과 `COMException.ErrorCode`를 반드시 로그에 남긴다.
 - 예외를 `Exception has been thrown by the target of an invocation.`만 출력하고 끝내지 않는다.

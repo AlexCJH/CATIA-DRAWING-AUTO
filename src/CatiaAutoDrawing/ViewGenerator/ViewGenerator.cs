@@ -26,12 +26,31 @@ public sealed class ViewGenerator : IViewGenerator
         throw new NotImplementedException("View generation is not implemented yet.");
     }
 
-    public Result GenerateFrontView(object drawingDocument, object sourceDocument)
+    public Result GenerateFrontView(
+        object drawingDocument,
+        object sourceDocument,
+        string frontViewDirection,
+        string topDirection)
     {
         _logger.Info("Front view generation started.");
+        _logger.Info($"Front view direction selected: {frontViewDirection}");
+        _logger.Info($"Top direction selected: {topDirection}");
 
         try
         {
+            var frontVector = DirectionVector.FromDirection(frontViewDirection);
+            var topVector = DirectionVector.FromDirection(topDirection);
+
+            _logger.Info($"Front view direction vector: {frontVector}");
+            _logger.Info($"Top direction vector: {topVector}");
+
+            if (frontVector.IsParallelTo(topVector))
+            {
+                const string message = "Front View Direction and Top Direction cannot be parallel.";
+                _logger.Error(message);
+                return Result.Failure(message);
+            }
+
             var sheets = GetComProperty(drawingDocument, "Sheets");
             if (sheets is null)
             {
@@ -80,7 +99,16 @@ public sealed class ViewGenerator : IViewGenerator
             if (generativeBehavior is not null)
             {
                 SetComProperty(generativeBehavior, "Document", sourceDocument);
-                InvokeComMethod(generativeBehavior, "DefineFrontView", 1.0, 0.0, 0.0, 0.0, 0.0, 1.0);
+                InvokeComMethod(
+                    generativeBehavior,
+                    "DefineFrontView",
+                    frontVector.X,
+                    frontVector.Y,
+                    frontVector.Z,
+                    topVector.X,
+                    topVector.Y,
+                    topVector.Z);
+                _logger.Info("Front view orientation applied.");
                 InvokeComMethod(generativeBehavior, "Update");
             }
             else
@@ -135,5 +163,44 @@ public sealed class ViewGenerator : IViewGenerator
             binder: null,
             target: comObject,
             args: args);
+    }
+
+    private readonly struct DirectionVector
+    {
+        private DirectionVector(double x, double y, double z)
+        {
+            X = x;
+            Y = y;
+            Z = z;
+        }
+
+        public double X { get; }
+        public double Y { get; }
+        public double Z { get; }
+
+        public static DirectionVector FromDirection(string direction)
+        {
+            return direction.Trim().ToUpperInvariant() switch
+            {
+                "+X" => new DirectionVector(1.0, 0.0, 0.0),
+                "-X" => new DirectionVector(-1.0, 0.0, 0.0),
+                "+Y" => new DirectionVector(0.0, 1.0, 0.0),
+                "-Y" => new DirectionVector(0.0, -1.0, 0.0),
+                "+Z" => new DirectionVector(0.0, 0.0, 1.0),
+                "-Z" => new DirectionVector(0.0, 0.0, -1.0),
+                _ => throw new ArgumentException($"Unsupported direction value: {direction}", nameof(direction))
+            };
+        }
+
+        public bool IsParallelTo(DirectionVector other)
+        {
+            var dotProduct = (X * other.X) + (Y * other.Y) + (Z * other.Z);
+            return Math.Abs(dotProduct) >= 1.0;
+        }
+
+        public override string ToString()
+        {
+            return $"{X:0}, {Y:0}, {Z:0}";
+        }
     }
 }

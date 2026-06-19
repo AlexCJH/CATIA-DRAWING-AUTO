@@ -45,6 +45,18 @@ public partial class MainForm : Form
         {
             drawingSizeComboBox.SelectedItem = "A3";
         }
+
+        frontViewDirectionComboBox.SelectedItem = _settings.DefaultFrontViewDirection;
+        if (frontViewDirectionComboBox.SelectedIndex < 0)
+        {
+            frontViewDirectionComboBox.SelectedItem = "-Y";
+        }
+
+        topDirectionComboBox.SelectedItem = _settings.DefaultTopDirection;
+        if (topDirectionComboBox.SelectedIndex < 0)
+        {
+            topDirectionComboBox.SelectedItem = "+Z";
+        }
     }
 
     private void CheckConnectionButton_Click(object? sender, EventArgs e)
@@ -86,11 +98,15 @@ public partial class MainForm : Form
     {
         _logger.Info("Drawing generation requested.");
         var drawingSize = Convert.ToString(drawingSizeComboBox.SelectedItem) ?? "A3";
+        var frontViewDirection = Convert.ToString(frontViewDirectionComboBox.SelectedItem) ?? "-Y";
+        var topDirection = Convert.ToString(topDirectionComboBox.SelectedItem) ?? "+Z";
 
         var result = _drawingGenerator.Generate(new DrawingGenerationContext
         {
             OutputFolder = _settings.DefaultOutputFolder,
             DrawingSize = drawingSize,
+            FrontViewDirection = frontViewDirection,
+            TopDirection = topDirection,
             DrawingTemplates = _settings.DrawingTemplates,
             EnablePdfExport = _settings.EnablePdfExport
         });

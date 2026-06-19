@@ -8,6 +8,7 @@ STEP 1: 활성 문서 이름 읽기
 STEP 2: 활성 문서 표식 확인
 STEP 3: CATDrawing 템플릿 열기 및 SaveAs 검증
 STEP 4: 템플릿 CATDrawing에 Front View 1개 생성 후 SaveAs
+STEP 4-1A: Front View 수동 방향 선택 검증
 ```
 
 ## STEP 3: CATDrawing 템플릿 열기 및 SaveAs 검증
@@ -47,6 +48,29 @@ STEP 4: 템플릿 CATDrawing에 Front View 1개 생성 후 SaveAs
 - Dimension 생성
 - PDF 출력
 - 표제란 자동 입력
+```
+
+## STEP 4-1A: Front View 수동 방향 선택 검증
+
+목표:
+
+1. 사용자가 Front View Direction을 `+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z` 중 하나로 선택
+2. 사용자가 Top Direction을 `+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z` 중 하나로 선택
+3. 선택값을 방향 벡터로 변환
+4. Front View Direction과 Top Direction이 서로 평행하면 오류 처리
+5. CATIA `DefineFrontView`에 수동 방향 벡터 적용
+6. Front View 방향 변화 확인
+
+## STEP 4-1A 제외 항목
+
+```text
+- MAIN_VIEW_PLANE 자동 해석
+- TOP_DIRECTION 자동 해석
+- Projection View 생성
+- Detail View 생성
+- Section View 생성
+- Dimension 생성
+- PDF 출력
 ```
 
 MVP 밖의 기능은 구현하지 않고 TODO 또는 별도 모듈의 향후 작업으로 남긴다.

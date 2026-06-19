@@ -9,5 +9,9 @@ namespace CatiaAutoDrawing.ViewGenerator;
 public interface IViewGenerator
 {
     ViewLayoutPlan CreateLayoutPlan(object catiaDocument);
-    Result GenerateFrontView(object drawingDocument, object sourceDocument);
+    Result GenerateFrontView(
+        object drawingDocument,
+        object sourceDocument,
+        string frontViewDirection,
+        string topDirection);
 }

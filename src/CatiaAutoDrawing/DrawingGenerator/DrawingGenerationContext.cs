@@ -10,6 +10,8 @@ public sealed class DrawingGenerationContext
     public string TemplatePath { get; set; } = string.Empty;
     public string OutputFolder { get; set; } = string.Empty;
     public string DrawingSize { get; set; } = "A3";
+    public string FrontViewDirection { get; set; } = "-Y";
+    public string TopDirection { get; set; } = "+Z";
     public IReadOnlyDictionary<string, string> DrawingTemplates { get; set; } =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     public bool EnablePdfExport { get; set; }

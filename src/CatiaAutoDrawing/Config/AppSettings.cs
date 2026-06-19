@@ -23,6 +23,8 @@ public sealed class AppSettings
     public string DefaultLogFolder { get; set; } = "logs";
     public string ProjectionMethod { get; set; } = "ThirdAngle";
     public string DefaultSheetSize { get; set; } = "A3";
+    public string DefaultFrontViewDirection { get; set; } = "-Y";
+    public string DefaultTopDirection { get; set; } = "+Z";
     public double DefaultScale { get; set; } = 1.0;
     public string RequiredGeoSetName { get; set; } = "GS_DRAWING_INFO";
     public string MainViewPlaneName { get; set; } = "MAIN_VIEW_PLANE";

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.9] - STEP 4-1A Manual Front View Direction
+
+- Added manual Front View Direction and Top Direction selection to MainForm.
+- Added default direction settings to appsettings.
+- Passed selected directions through DrawingGenerationContext and DrawingGenerator to ViewGenerator.
+- Converted selected directions to vectors in ViewGenerator and rejected parallel front/top direction combinations.
+- Applied selected orientation vectors to CATIA DefineFrontView.
+
 ## [0.0.8] - STEP 4 Front View Generation
 
 - Added STEP 4 scope for creating one Front View on the opened template CATDrawing.
