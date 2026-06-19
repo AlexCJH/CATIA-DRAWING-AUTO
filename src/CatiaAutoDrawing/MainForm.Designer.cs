@@ -12,6 +12,8 @@ partial class MainForm
     private Button readActiveDocumentButton = null!;
     private Button inspectModelButton = null!;
     private Button runDrawingButton = null!;
+    private ComboBox drawingSizeComboBox = null!;
+    private Label drawingSizeLabel = null!;
     private CheckBox enablePdfExportCheckBox = null!;
     private TextBox logTextBox = null!;
     private Label connectionStatusLabel = null!;
@@ -25,6 +27,8 @@ partial class MainForm
         readActiveDocumentButton = new Button();
         inspectModelButton = new Button();
         runDrawingButton = new Button();
+        drawingSizeComboBox = new ComboBox();
+        drawingSizeLabel = new Label();
         enablePdfExportCheckBox = new CheckBox();
         logTextBox = new TextBox();
         connectionStatusLabel = new Label();
@@ -94,12 +98,27 @@ partial class MainForm
         modelInspectionStatusLabel.TabIndex = 7;
         modelInspectionStatusLabel.Text = "Model inspection: -";
 
+        drawingSizeLabel.AutoSize = true;
+        drawingSizeLabel.Location = new System.Drawing.Point(16, 176);
+        drawingSizeLabel.Name = "drawingSizeLabel";
+        drawingSizeLabel.Size = new System.Drawing.Size(75, 15);
+        drawingSizeLabel.TabIndex = 8;
+        drawingSizeLabel.Text = "Drawing size";
+
+        drawingSizeComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+        drawingSizeComboBox.FormattingEnabled = true;
+        drawingSizeComboBox.Items.AddRange(new object[] { "A4", "A3", "A2", "A1" });
+        drawingSizeComboBox.Location = new System.Drawing.Point(104, 172);
+        drawingSizeComboBox.Name = "drawingSizeComboBox";
+        drawingSizeComboBox.Size = new System.Drawing.Size(88, 23);
+        drawingSizeComboBox.TabIndex = 9;
+
         enablePdfExportCheckBox.AutoSize = true;
         enablePdfExportCheckBox.Enabled = false;
-        enablePdfExportCheckBox.Location = new System.Drawing.Point(16, 176);
+        enablePdfExportCheckBox.Location = new System.Drawing.Point(216, 174);
         enablePdfExportCheckBox.Name = "enablePdfExportCheckBox";
         enablePdfExportCheckBox.Size = new System.Drawing.Size(82, 19);
-        enablePdfExportCheckBox.TabIndex = 8;
+        enablePdfExportCheckBox.TabIndex = 10;
         enablePdfExportCheckBox.Text = "PDF export";
         enablePdfExportCheckBox.UseVisualStyleBackColor = true;
 
@@ -110,13 +129,15 @@ partial class MainForm
         logTextBox.ReadOnly = true;
         logTextBox.ScrollBars = ScrollBars.Vertical;
         logTextBox.Size = new System.Drawing.Size(664, 240);
-        logTextBox.TabIndex = 9;
+        logTextBox.TabIndex = 11;
 
         AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
         ClientSize = new System.Drawing.Size(696, 464);
         Controls.Add(logTextBox);
         Controls.Add(enablePdfExportCheckBox);
+        Controls.Add(drawingSizeComboBox);
+        Controls.Add(drawingSizeLabel);
         Controls.Add(modelInspectionStatusLabel);
         Controls.Add(activeDocumentTypeLabel);
         Controls.Add(activeDocumentNameLabel);

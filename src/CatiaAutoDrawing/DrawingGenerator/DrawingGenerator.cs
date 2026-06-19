@@ -3,12 +3,12 @@ using System.IO;
 using System.Runtime.InteropServices;
 using CatiaAutoDrawing.Core;
 using CatiaAutoDrawing.Logging;
+using CatiaAutoDrawing.Utils;
 
 namespace CatiaAutoDrawing.DrawingGenerator;
 
 /// <summary>
-/// Role: Coordinates the drawing document creation flow.
-/// TODO: Add template opening after the template MVP step starts.
+/// Role: Coordinates the template open and SaveAs drawing flow.
 /// TODO: Add ViewGenerator, DimensionGenerator, and TitleBlockWriter calls only in their own steps.
 /// </summary>
 public sealed class DrawingGenerator : IDrawingGenerator
@@ -24,7 +24,7 @@ public sealed class DrawingGenerator : IDrawingGenerator
 
     public Result<string> Generate(DrawingGenerationContext context)
     {
-        _logger.Info("Drawing document creation started.");
+        _logger.Info("Drawing generation requested.");
 
         object? catiaApplication = null;
         object? activeDocument = null;
@@ -44,10 +44,33 @@ public sealed class DrawingGenerator : IDrawingGenerator
             }
 
             var activeDocumentName = Convert.ToString(GetComProperty(activeDocument, "Name")) ?? string.Empty;
-            if (!activeDocumentName.EndsWith(".CATPart", StringComparison.OrdinalIgnoreCase))
+            _logger.Info($"Active document: {activeDocumentName}");
+
+            if (!IsSupportedActiveDocument(activeDocumentName))
             {
-                var message = $"Active document is not a CATPart: {activeDocumentName}";
+                var message = $"Active document is not a CATPart or CATProduct: {activeDocumentName}";
                 _logger.Warning(message);
+                return Result<string>.Failure(message);
+            }
+
+            var drawingSize = NormalizeDrawingSize(context.DrawingSize);
+            _logger.Info($"Selected drawing size: {drawingSize}");
+
+            if (!context.DrawingTemplates.TryGetValue(drawingSize, out var configuredTemplatePath) ||
+                string.IsNullOrWhiteSpace(configuredTemplatePath))
+            {
+                var message = $"Drawing template is not configured for size: {drawingSize}";
+                _logger.Error(message);
+                return Result<string>.Failure(message);
+            }
+
+            var templatePath = ResolveRepositoryPath(configuredTemplatePath);
+            _logger.Info($"Template path resolved: {GetDisplayPath(templatePath)}");
+
+            if (!File.Exists(templatePath))
+            {
+                var message = $"Drawing template not found: {GetDisplayPath(templatePath)}";
+                _logger.Error(message);
                 return Result<string>.Failure(message);
             }
 
@@ -59,40 +82,45 @@ public sealed class DrawingGenerator : IDrawingGenerator
                 return Result<string>.Failure(message);
             }
 
-            drawingDocument = InvokeComMethod(documents, "Add", "Drawing");
+            _logger.Info("Opening drawing template...");
+            drawingDocument = InvokeComMethod(documents, "Open", templatePath);
             if (drawingDocument is null)
             {
-                const string message = "New CATDrawing document could not be created.";
+                const string message = "Drawing template could not be opened.";
                 _logger.Error(message);
                 return Result<string>.Failure(message);
             }
 
-            _logger.Info("New CATDrawing document created.");
-            _logger.Warning("TODO: A3 sheet setup is skipped until CATIA V5 R35 sheet API is validated.");
+            _logger.Info("Drawing template opened.");
 
             var outputFolder = ResolveOutputFolder(context.OutputFolder);
             Directory.CreateDirectory(outputFolder);
 
-            var drawingFileName = Path.GetFileNameWithoutExtension(activeDocumentName) + ".CATDrawing";
+            var safeActiveName = SanitizeFileName(Path.GetFileNameWithoutExtension(activeDocumentName));
+            var drawingFileName = $"{safeActiveName}_{drawingSize}.CATDrawing";
             var drawingPath = GetAvailableDrawingPath(Path.Combine(outputFolder, drawingFileName));
 
+            _logger.Info($"Saving drawing as: {GetDisplayPath(drawingPath)}");
             InvokeComMethod(drawingDocument, "SaveAs", drawingPath);
 
-            _logger.Info($"Drawing saved: {Path.GetRelativePath(Directory.GetCurrentDirectory(), drawingPath)}");
-            _logger.Info("Drawing generation step 3 succeeded.");
+            _logger.Info("Drawing template copy saved.");
+            _logger.Info("STEP 3 succeeded.");
 
             return Result<string>.Success(drawingPath);
         }
-        catch (COMException ex)
-        {
-            var message = $"Drawing generation failed. COM error: 0x{ex.ErrorCode:X8}";
-            _logger.Error(message);
-            return Result<string>.Failure(message);
-        }
         catch (Exception ex)
         {
+            var rootCause = ExceptionUtils.GetRootCause(ex);
+            var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
             var message = $"Drawing generation failed: {ex.Message}";
-            _logger.Error(message);
+
+            _logger.Error(ex, message);
+            _logger.Error($"Root cause: {rootCause.Message}");
+            if (!string.IsNullOrWhiteSpace(comErrorCode))
+            {
+                _logger.Error($"Root COM error: {comErrorCode}");
+            }
+
             return Result<string>.Failure(message);
         }
         finally
@@ -116,12 +144,31 @@ public sealed class DrawingGenerator : IDrawingGenerator
         return catiaApplication;
     }
 
+    private static bool IsSupportedActiveDocument(string activeDocumentName)
+    {
+        return activeDocumentName.EndsWith(".CATPart", StringComparison.OrdinalIgnoreCase) ||
+               activeDocumentName.EndsWith(".CATProduct", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeDrawingSize(string drawingSize)
+    {
+        return string.IsNullOrWhiteSpace(drawingSize)
+            ? "A3"
+            : drawingSize.Trim().ToUpperInvariant();
+    }
+
     private static string ResolveOutputFolder(string outputFolder)
     {
         var configuredFolder = string.IsNullOrWhiteSpace(outputFolder) ? "output" : outputFolder;
-        if (Path.IsPathRooted(configuredFolder))
+        return ResolveRepositoryPath(configuredFolder);
+    }
+
+    private static string ResolveRepositoryPath(string path)
+    {
+        var configuredPath = string.IsNullOrWhiteSpace(path) ? "." : path;
+        if (Path.IsPathRooted(configuredPath))
         {
-            return configuredFolder;
+            return configuredPath;
         }
 
         var current = new DirectoryInfo(Directory.GetCurrentDirectory());
@@ -129,13 +176,13 @@ public sealed class DrawingGenerator : IDrawingGenerator
         {
             if (File.Exists(Path.Combine(current.FullName, "CatiaAutoDrawing.sln")))
             {
-                return Path.Combine(current.FullName, configuredFolder);
+                return Path.Combine(current.FullName, configuredPath);
             }
 
             current = current.Parent;
         }
 
-        return Path.GetFullPath(configuredFolder);
+        return Path.GetFullPath(configuredPath);
     }
 
     private static string GetAvailableDrawingPath(string requestedPath)
@@ -148,6 +195,30 @@ public sealed class DrawingGenerator : IDrawingGenerator
         var folder = Path.GetDirectoryName(requestedPath) ?? Directory.GetCurrentDirectory();
         var fileName = Path.GetFileNameWithoutExtension(requestedPath);
         return Path.Combine(folder, $"{fileName}_{DateTime.Now:yyyyMMddHHmmss}.CATDrawing");
+    }
+
+    private static string SanitizeFileName(string fileName)
+    {
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var chars = fileName.ToCharArray();
+        for (var index = 0; index < chars.Length; index++)
+        {
+            if (Array.IndexOf(invalidChars, chars[index]) >= 0)
+            {
+                chars[index] = '_';
+            }
+        }
+
+        var sanitized = new string(chars).Trim();
+        return string.IsNullOrWhiteSpace(sanitized) ? "CATIA_DOCUMENT" : sanitized;
+    }
+
+    private static string GetDisplayPath(string path)
+    {
+        var currentDirectory = Directory.GetCurrentDirectory();
+        var fullPath = Path.GetFullPath(path);
+
+        return Path.GetRelativePath(currentDirectory, fullPath);
     }
 
     private static object? GetComProperty(object comObject, string propertyName)

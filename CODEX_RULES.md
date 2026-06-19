@@ -6,9 +6,15 @@
 - CATIA API를 추측해서 구현하지 않는다.
 - 검증되지 않은 CATIA API 코드는 TODO 주석으로 유지한다.
 - `MainForm`에 로직을 집중시키지 않는다.
-- UI에서 CATIA COM API를 직접 호출하지 않는다.
-- 로그 없는 기능을 구현하지 않는다.
+- `MainForm`에서 CATIA COM API를 직접 호출하지 않는다.
+- 로그 없는 기능은 구현하지 않는다.
 - 항상 빌드 가능한 상태를 유지한다.
 - 변경 후 `CHANGELOG.md`를 업데이트한다.
 - 한 파일에 여러 모듈의 책임을 몰아넣지 않는다.
 - PDF, View, Dimension 기능을 동시에 구현하지 않는다.
+- 새 CATDrawing 생성을 기본 방식으로 사용하지 않는다.
+- 회사 표준 CATDrawing 템플릿 기반 생성 방식을 기본 원칙으로 사용한다.
+- CATDrawing 생성은 반드시 Template Open -> SaveAs 순서로 처리한다.
+- `DrawingGenerator`는 도면 생성 흐름만 담당하고, View 생성은 `ViewGenerator`에 위임한다.
+- CATIA API 호출 실패 시 `TargetInvocationException`의 `InnerException`과 `COMException.ErrorCode`를 반드시 로그에 남긴다.
+- 예외를 `Exception has been thrown by the target of an invocation.`만 출력하고 끝내지 않는다.

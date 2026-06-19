@@ -1,6 +1,7 @@
 using System;
 using System.Windows.Forms;
 using CatiaAutoDrawing.CatiaConnection;
+using CatiaAutoDrawing.Config;
 using CatiaAutoDrawing.DrawingGenerator;
 using CatiaAutoDrawing.Logging;
 using CatiaAutoDrawing.ModelInspector;
@@ -20,15 +21,30 @@ public partial class MainForm : Form
     private readonly IModelInspector _modelInspector;
     private readonly IDrawingGenerator _drawingGenerator;
     private readonly ILogger _logger;
+    private readonly AppSettings _settings;
 
     public MainForm()
     {
         InitializeComponent();
 
-        _logger = new FileLogger("logs", AppendLog);
+        var settingsResult = new ConfigLoader().LoadAppSettings("config/appsettings.json");
+        _settings = settingsResult.Value ?? new AppSettings();
+
+        _logger = new FileLogger(_settings.DefaultLogFolder, AppendLog);
+        if (!settingsResult.IsSuccess)
+        {
+            _logger.Warning(settingsResult.ErrorMessage ?? "Configuration load failed. Default settings will be used.");
+        }
+
         _catiaConnectionService = new CatiaConnectionService(_logger);
         _modelInspector = new ModelInspector.ModelInspector(_logger);
         _drawingGenerator = new DrawingGenerator.DrawingGenerator(_logger);
+
+        drawingSizeComboBox.SelectedItem = _settings.DefaultSheetSize;
+        if (drawingSizeComboBox.SelectedIndex < 0)
+        {
+            drawingSizeComboBox.SelectedItem = "A3";
+        }
     }
 
     private void CheckConnectionButton_Click(object? sender, EventArgs e)
@@ -69,11 +85,14 @@ public partial class MainForm : Form
     private void RunDrawingButton_Click(object? sender, EventArgs e)
     {
         _logger.Info("Drawing generation requested.");
+        var drawingSize = Convert.ToString(drawingSizeComboBox.SelectedItem) ?? "A3";
 
         var result = _drawingGenerator.Generate(new DrawingGenerationContext
         {
-            OutputFolder = "output",
-            EnablePdfExport = false
+            OutputFolder = _settings.DefaultOutputFolder,
+            DrawingSize = drawingSize,
+            DrawingTemplates = _settings.DrawingTemplates,
+            EnablePdfExport = _settings.EnablePdfExport
         });
 
         if (!result.IsSuccess)

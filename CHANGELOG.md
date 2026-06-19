@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.6] - STEP 3 Template Open and SaveAs
+
+- Changed drawing creation flow from empty CATDrawing creation to template open and SaveAs flow.
+- Added drawing size selection for A4/A3/A2/A1.
+- Added size-based CATDrawing template map to appsettings.
+- Improved CATIA COM and TargetInvocationException logging.
+- Updated project, MVP, rules, README, and templates documentation for the STEP 3 direction change.
+
 ## [0.0.5] - STEP 3 CATDrawing Creation
 
 - Implemented new CATDrawing document creation in DrawingGenerator.

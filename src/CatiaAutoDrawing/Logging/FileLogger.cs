@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using CatiaAutoDrawing.Utils;
 
 namespace CatiaAutoDrawing.Logging;
 
@@ -25,6 +26,12 @@ public sealed class FileLogger : ILogger
 
     public void Error(string message) => Write("ERROR", message);
 
+    public void Error(Exception exception, string message)
+    {
+        Write("ERROR", message);
+        WriteFileOnly("ERROR", ExceptionUtils.GetDetailedMessage(exception));
+    }
+
     private void Write(string level, string message)
     {
         Directory.CreateDirectory(_logFolder);
@@ -34,5 +41,17 @@ public sealed class FileLogger : ILogger
 
         File.AppendAllText(filePath, line + Environment.NewLine);
         _sink?.Invoke(line);
+    }
+
+    private void WriteFileOnly(string level, string message)
+    {
+        Directory.CreateDirectory(_logFolder);
+
+        var filePath = Path.Combine(_logFolder, $"{DateTime.Now:yyyyMMdd}.txt");
+        foreach (var detailLine in message.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None))
+        {
+            var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{level}] {detailLine}";
+            File.AppendAllText(filePath, line + Environment.NewLine);
+        }
     }
 }
