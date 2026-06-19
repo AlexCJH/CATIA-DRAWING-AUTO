@@ -64,7 +64,7 @@ public sealed class DrawingGenerator : IDrawingGenerator
                 return Result<string>.Failure(message);
             }
 
-            var templatePath = ResolveRepositoryPath(configuredTemplatePath);
+            var templatePath = Path.GetFullPath(ResolveRepositoryPath(configuredTemplatePath));
             _logger.Info($"Template path resolved: {GetDisplayPath(templatePath)}");
 
             if (!File.Exists(templatePath))
@@ -82,8 +82,19 @@ public sealed class DrawingGenerator : IDrawingGenerator
                 return Result<string>.Failure(message);
             }
 
+            LogTemplateOpenDiagnostics(templatePath);
+
             _logger.Info("Opening drawing template...");
-            drawingDocument = InvokeComMethod(documents, "Open", templatePath);
+            try
+            {
+                drawingDocument = InvokeComMethod(documents, "Open", templatePath);
+            }
+            catch
+            {
+                LogTemplateOpenFailureHints();
+                throw;
+            }
+
             if (drawingDocument is null)
             {
                 const string message = "Drawing template could not be opened.";
@@ -183,6 +194,26 @@ public sealed class DrawingGenerator : IDrawingGenerator
         }
 
         return Path.GetFullPath(configuredPath);
+    }
+
+    private void LogTemplateOpenDiagnostics(string templatePath)
+    {
+        var fileInfo = new FileInfo(templatePath);
+
+        _logger.Info($"Template display path: {GetDisplayPath(templatePath)}");
+        _logger.Info($"Template absolute path: {templatePath}");
+        _logger.Info($"Template file exists: {fileInfo.Exists}");
+        _logger.Info($"Template file size: {(fileInfo.Exists ? fileInfo.Length : 0)} bytes");
+        _logger.Info($"Template read-only: {fileInfo.Exists && fileInfo.IsReadOnly}");
+        _logger.Info($"Current directory: {Directory.GetCurrentDirectory()}");
+        _logger.Info($"CATIA Documents.Open argument: {templatePath}");
+    }
+
+    private void LogTemplateOpenFailureHints()
+    {
+        _logger.Warning("CATIA Documents.Open failed. Check whether the template opens manually in CATIA.");
+        _logger.Warning("If the path contains Korean characters, spaces, or special characters, test with a simple path such as C:\\CatiaAutoDrawingTemplates.");
+        _logger.Warning("Check whether the template file is already open, locked, or saved in an incompatible CATIA version.");
     }
 
     private static string GetAvailableDrawingPath(string requestedPath)

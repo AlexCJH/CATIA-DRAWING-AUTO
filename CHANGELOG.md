@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.7] - STEP 3 Template Open Diagnostics
+
+- Added detailed pre-open diagnostics for CATDrawing templates.
+- Logged template display path, absolute path, file existence, size, read-only state, current directory, and the exact CATIA Documents.Open argument.
+- Added warning hints when CATIA Documents.Open fails.
+
 ## [0.0.6] - STEP 3 Template Open and SaveAs
 
 - Changed drawing creation flow from empty CATDrawing creation to template open and SaveAs flow.
