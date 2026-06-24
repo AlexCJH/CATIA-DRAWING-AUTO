@@ -14,10 +14,6 @@ partial class MainForm
     private Button runDrawingButton = null!;
     private ComboBox drawingSizeComboBox = null!;
     private Label drawingSizeLabel = null!;
-    private ComboBox frontViewDirectionComboBox = null!;
-    private Label frontViewDirectionLabel = null!;
-    private ComboBox topDirectionComboBox = null!;
-    private Label topDirectionLabel = null!;
     private ComboBox viewSideComboBox = null!;
     private Label viewSideLabel = null!;
     private ComboBox viewRotationComboBox = null!;
@@ -37,10 +33,6 @@ partial class MainForm
         runDrawingButton = new Button();
         drawingSizeComboBox = new ComboBox();
         drawingSizeLabel = new Label();
-        frontViewDirectionComboBox = new ComboBox();
-        frontViewDirectionLabel = new Label();
-        topDirectionComboBox = new ComboBox();
-        topDirectionLabel = new Label();
         viewSideComboBox = new ComboBox();
         viewSideLabel = new Label();
         viewRotationComboBox = new ComboBox();
@@ -129,65 +121,36 @@ partial class MainForm
         drawingSizeComboBox.Size = new System.Drawing.Size(88, 23);
         drawingSizeComboBox.TabIndex = 9;
 
-        frontViewDirectionLabel.AutoSize = true;
-        frontViewDirectionLabel.Location = new System.Drawing.Point(216, 176);
-        frontViewDirectionLabel.Name = "frontViewDirectionLabel";
-        frontViewDirectionLabel.Size = new System.Drawing.Size(83, 15);
-        frontViewDirectionLabel.TabIndex = 10;
-        frontViewDirectionLabel.Text = "Front direction";
-
-        frontViewDirectionComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
-        frontViewDirectionComboBox.FormattingEnabled = true;
-        frontViewDirectionComboBox.Items.AddRange(new object[] { "+X", "-X", "+Y", "-Y", "+Z", "-Z" });
-        frontViewDirectionComboBox.Location = new System.Drawing.Point(312, 172);
-        frontViewDirectionComboBox.Name = "frontViewDirectionComboBox";
-        frontViewDirectionComboBox.Size = new System.Drawing.Size(72, 23);
-        frontViewDirectionComboBox.TabIndex = 11;
-
-        topDirectionLabel.AutoSize = true;
-        topDirectionLabel.Location = new System.Drawing.Point(408, 176);
-        topDirectionLabel.Name = "topDirectionLabel";
-        topDirectionLabel.Size = new System.Drawing.Size(75, 15);
-        topDirectionLabel.TabIndex = 12;
-        topDirectionLabel.Text = "Top direction";
-
-        topDirectionComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
-        topDirectionComboBox.FormattingEnabled = true;
-        topDirectionComboBox.Items.AddRange(new object[] { "+X", "-X", "+Y", "-Y", "+Z", "-Z" });
-        topDirectionComboBox.Location = new System.Drawing.Point(496, 172);
-        topDirectionComboBox.Name = "topDirectionComboBox";
-        topDirectionComboBox.Size = new System.Drawing.Size(72, 23);
-        topDirectionComboBox.TabIndex = 13;
 
         viewSideLabel.AutoSize = true;
-        viewSideLabel.Location = new System.Drawing.Point(16, 204);
+        viewSideLabel.Location = new System.Drawing.Point(216, 176);
         viewSideLabel.Name = "viewSideLabel";
         viewSideLabel.Size = new System.Drawing.Size(55, 15);
-        viewSideLabel.TabIndex = 15;
+        viewSideLabel.TabIndex = 10;
         viewSideLabel.Text = "View side";
 
         viewSideComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
         viewSideComboBox.FormattingEnabled = true;
         viewSideComboBox.Items.AddRange(new object[] { "Normal", "Opposite" });
-        viewSideComboBox.Location = new System.Drawing.Point(104, 200);
+        viewSideComboBox.Location = new System.Drawing.Point(304, 172);
         viewSideComboBox.Name = "viewSideComboBox";
         viewSideComboBox.Size = new System.Drawing.Size(88, 23);
-        viewSideComboBox.TabIndex = 16;
+        viewSideComboBox.TabIndex = 11;
 
         viewRotationLabel.AutoSize = true;
-        viewRotationLabel.Location = new System.Drawing.Point(216, 204);
+        viewRotationLabel.Location = new System.Drawing.Point(408, 176);
         viewRotationLabel.Name = "viewRotationLabel";
         viewRotationLabel.Size = new System.Drawing.Size(78, 15);
-        viewRotationLabel.TabIndex = 17;
+        viewRotationLabel.TabIndex = 12;
         viewRotationLabel.Text = "View rotation";
 
         viewRotationComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
         viewRotationComboBox.FormattingEnabled = true;
         viewRotationComboBox.Items.AddRange(new object[] { "0", "90", "180", "270" });
-        viewRotationComboBox.Location = new System.Drawing.Point(312, 200);
+        viewRotationComboBox.Location = new System.Drawing.Point(504, 172);
         viewRotationComboBox.Name = "viewRotationComboBox";
         viewRotationComboBox.Size = new System.Drawing.Size(72, 23);
-        viewRotationComboBox.TabIndex = 18;
+        viewRotationComboBox.TabIndex = 13;
 
         enablePdfExportCheckBox.AutoSize = true;
         enablePdfExportCheckBox.Enabled = false;
@@ -199,13 +162,13 @@ partial class MainForm
         enablePdfExportCheckBox.UseVisualStyleBackColor = true;
 
         logTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-        logTextBox.Location = new System.Drawing.Point(16, 236);
+        logTextBox.Location = new System.Drawing.Point(16, 208);
         logTextBox.Multiline = true;
         logTextBox.Name = "logTextBox";
         logTextBox.ReadOnly = true;
         logTextBox.ScrollBars = ScrollBars.Vertical;
-        logTextBox.Size = new System.Drawing.Size(664, 212);
-        logTextBox.TabIndex = 19;
+        logTextBox.Size = new System.Drawing.Size(664, 240);
+        logTextBox.TabIndex = 18;
 
         AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
@@ -216,10 +179,6 @@ partial class MainForm
         Controls.Add(viewRotationLabel);
         Controls.Add(viewSideComboBox);
         Controls.Add(viewSideLabel);
-        Controls.Add(topDirectionComboBox);
-        Controls.Add(topDirectionLabel);
-        Controls.Add(frontViewDirectionComboBox);
-        Controls.Add(frontViewDirectionLabel);
         Controls.Add(drawingSizeComboBox);
         Controls.Add(drawingSizeLabel);
         Controls.Add(modelInspectionStatusLabel);
@@ -237,6 +196,7 @@ partial class MainForm
         PerformLayout();
     }
 }
+
 
 
 

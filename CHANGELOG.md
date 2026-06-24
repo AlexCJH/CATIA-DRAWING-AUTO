@@ -1,5 +1,11 @@
 ﻿# Changelog
 
+## [0.0.14] - STEP 5 Preparation Global Axis UI Cleanup
+
+- Removed obsolete global axis direction UI.
+- Standardized front view orientation on marker-based direction control.
+- Removed unused Global Axis direction defaults and context values while keeping ViewSide/ViewRotation correction.
+
 ## [0.0.13] - STEP 4 View Side and Rotation Correction
 
 - Added View Side and View Rotation options for marker based Front View correction.
@@ -84,6 +90,7 @@
 - Added placeholder modules.
 - Added configuration files.
 - Added documentation files.
+
 
 
 

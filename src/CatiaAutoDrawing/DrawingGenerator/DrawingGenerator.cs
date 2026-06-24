@@ -115,8 +115,6 @@ public sealed class DrawingGenerator : IDrawingGenerator
             var frontViewResult = _viewGenerator.GenerateFrontView(
                 drawingDocument,
                 activeDocument,
-                context.FrontViewDirection,
-                context.TopDirection,
                 context.ViewSide,
                 context.ViewRotation);
 
@@ -313,5 +311,6 @@ public sealed class DrawingGenerator : IDrawingGenerator
         IntPtr pvReserved,
         [MarshalAs(UnmanagedType.IUnknown)] out object ppunk);
 }
+
 
 

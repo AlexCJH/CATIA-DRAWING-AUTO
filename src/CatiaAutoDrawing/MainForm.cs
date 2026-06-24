@@ -46,17 +46,6 @@ public partial class MainForm : Form
             drawingSizeComboBox.SelectedItem = "A3";
         }
 
-        frontViewDirectionComboBox.SelectedItem = _settings.DefaultFrontViewDirection;
-        if (frontViewDirectionComboBox.SelectedIndex < 0)
-        {
-            frontViewDirectionComboBox.SelectedItem = "-Y";
-        }
-
-        topDirectionComboBox.SelectedItem = _settings.DefaultTopDirection;
-        if (topDirectionComboBox.SelectedIndex < 0)
-        {
-            topDirectionComboBox.SelectedItem = "+Z";
-        }
         viewSideComboBox.SelectedItem = _settings.DefaultViewSide;
         if (viewSideComboBox.SelectedIndex < 0)
         {
@@ -109,8 +98,6 @@ public partial class MainForm : Form
     {
         _logger.Info("Drawing generation button clicked.");
         var drawingSize = Convert.ToString(drawingSizeComboBox.SelectedItem) ?? "A3";
-        var frontViewDirection = Convert.ToString(frontViewDirectionComboBox.SelectedItem) ?? "-Y";
-        var topDirection = Convert.ToString(topDirectionComboBox.SelectedItem) ?? "+Z";
         var viewSide = Convert.ToString(viewSideComboBox.SelectedItem) ?? "Opposite";
         var viewRotationText = Convert.ToString(viewRotationComboBox.SelectedItem) ?? "0";
         var viewRotation = int.TryParse(viewRotationText, out var parsedViewRotation) ? parsedViewRotation : 0;
@@ -119,8 +106,6 @@ public partial class MainForm : Form
         {
             OutputFolder = _settings.DefaultOutputFolder,
             DrawingSize = drawingSize,
-            FrontViewDirection = frontViewDirection,
-            TopDirection = topDirection,
             ViewSide = viewSide,
             ViewRotation = viewRotation,
             DrawingTemplates = _settings.DrawingTemplates,
@@ -162,6 +147,7 @@ public partial class MainForm : Form
         logTextBox.AppendText(message + Environment.NewLine);
     }
 }
+
 
 
 

@@ -29,8 +29,6 @@ public sealed class ViewGenerator : IViewGenerator
     public Result GenerateFrontView(
         object drawingDocument,
         object sourceDocument,
-        string frontViewDirection,
-        string topDirection,
         string viewSide,
         int viewRotation)
     {
@@ -794,6 +792,7 @@ public sealed class ViewGenerator : IViewGenerator
             _ => throw new InvalidOperationException($"Unsupported view rotation value: {viewRotation}")
         };
     }
+
     private static string FormatArray(object?[] values)
     {
         return string.Join(", ", Array.ConvertAll(values, value => value?.ToString() ?? "<null>"));
@@ -818,20 +817,6 @@ public sealed class ViewGenerator : IViewGenerator
         public double Z { get; }
         public bool IsZero => Length < 0.000001;
         private double Length => Math.Sqrt((X * X) + (Y * Y) + (Z * Z));
-
-        public static DirectionVector FromDirection(string direction)
-        {
-            return direction.Trim().ToUpperInvariant() switch
-            {
-                "+X" => new DirectionVector(1.0, 0.0, 0.0),
-                "-X" => new DirectionVector(-1.0, 0.0, 0.0),
-                "+Y" => new DirectionVector(0.0, 1.0, 0.0),
-                "-Y" => new DirectionVector(0.0, -1.0, 0.0),
-                "+Z" => new DirectionVector(0.0, 0.0, 1.0),
-                "-Z" => new DirectionVector(0.0, 0.0, -1.0),
-                _ => throw new ArgumentException($"Unsupported direction value: {direction}", nameof(direction))
-            };
-        }
 
         public bool IsParallelTo(DirectionVector other)
         {
@@ -898,6 +883,7 @@ public sealed class ViewGenerator : IViewGenerator
         public DirectionVector TopVector { get; }
     }
 }
+
 
 
 

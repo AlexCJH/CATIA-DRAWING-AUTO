@@ -23,8 +23,6 @@ public sealed class AppSettings
     public string DefaultLogFolder { get; set; } = "logs";
     public string ProjectionMethod { get; set; } = "ThirdAngle";
     public string DefaultSheetSize { get; set; } = "A3";
-    public string DefaultFrontViewDirection { get; set; } = "-Y";
-    public string DefaultTopDirection { get; set; } = "+Z";
     public string DefaultViewSide { get; set; } = "Opposite";
     public int DefaultViewRotation { get; set; }
     public double DefaultScale { get; set; } = 1.0;
@@ -38,5 +36,6 @@ public sealed class AppSettings
     public bool EnablePdfExport { get; set; }
     public Dictionary<string, string> DrawingTemplates { get; set; }
 }
+
 
 

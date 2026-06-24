@@ -12,9 +12,8 @@ public interface IViewGenerator
     Result GenerateFrontView(
         object drawingDocument,
         object sourceDocument,
-        string frontViewDirection,
-        string topDirection,
         string viewSide,
         int viewRotation);
 }
+
 

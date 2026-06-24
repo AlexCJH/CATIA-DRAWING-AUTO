@@ -64,18 +64,19 @@ templates/STD_A1_TEMPLATE.CATDrawing
 4. 기준 Plane 및 Direction 검사
 5. 회사 표준 CATDrawing 템플릿 열기 및 SaveAs
 6. 열린 템플릿 도면에 Front View 추가
-7. STEP 4-1A: Front View 방향을 수동 선택값으로 지정하는 방식 검증
-8. Projection View 추가
-9. Detail / Section View 추가
-10. 치수 생성
-11. 표제란 입력
-12. 저장 및 PDF 출력
+7. STEP 4-1A: Global Axis 수동 방향 선택 방식 검증 완료 및 폐기
+8. STEP 4-1B: MAIN_VIEW_PLANE + TOP_DIRECTION + ViewSide + ViewRotation 기반 Front View 방향 제어
+9. Projection View 추가
+10. Detail / Section View 추가
+11. 치수 생성
+12. 표제란 입력
+13. 저장 및 PDF 출력
 
 ## STEP 4-1A 방향
 
-STEP 4-1A는 `MAIN_VIEW_PLANE` / `TOP_DIRECTION` 자동 해석을 구현하지 않는다. 사용자가 UI에서 선택한 Front View Direction과 Top Direction을 벡터로 변환해 CATIA Front View 방향 지정 API 동작을 검증한다.
+STEP 4-1A의 Global XYZ 수동 방향 선택 방식은 CATIA DefineFrontView API 검증을 위한 실험으로 완료되었고, 현재 UI와 생성 흐름에서는 폐기되었다. `+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`를 사용자가 직접 선택하는 방식은 실제 부품 기준면이 Global 축과 평행하지 않을 때 혼동을 만들 수 있으므로 다시 도입하지 않는다.
 
 ## STEP 4-1B Marker 기반 방향
 
-Global XYZ 방향 선택 방식은 실제 부품의 도면 기준면이 CATIA Global 축과 평행하지 않은 경우 한계가 있으므로 보조 기능으로만 사용한다. 최종 Front View 방향 제어 원칙은 GS_DRAWING_INFO 안의 MAIN_VIEW_PLANE normal vector와 TOP_DIRECTION direction vector를 사용하는 Marker 기반 방식이다.
+최종 Front View 방향 제어 방식은 `GS_DRAWING_INFO` 안의 `MAIN_VIEW_PLANE` + `TOP_DIRECTION` marker 기반이다. `MAIN_VIEW_PLANE` normal vector는 정면으로 볼 면을 결정하고, `TOP_DIRECTION` direction vector는 기본 0도 위쪽 방향을 결정한다. 사용자는 UI의 `View Side`로 normal/opposite 면을 선택하고 `View Rotation`의 `0/90/180/270` 값으로 같은 면 안에서 도면상 회전만 보정한다.
 

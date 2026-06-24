@@ -20,4 +20,7 @@
 - CATIA API 호출 실패 시 `TargetInvocationException`의 `InnerException`과 `COMException.ErrorCode`를 반드시 로그에 남긴다.
 - 예외를 `Exception has been thrown by the target of an invocation.`만 출력하고 끝내지 않는다.
 - View 방향의 최종 원칙은 Global Axis가 아니라 `GS_DRAWING_INFO`의 `MAIN_VIEW_PLANE` + `TOP_DIRECTION` Marker 기반이다.
+- View 방향 제어에 Global X/Y/Z 수동 선택 방식을 다시 도입하지 않는다.
+- Front View 방향은 Marker 기반 방식만 사용한다.
+- MAIN_VIEW_PLANE / TOP_DIRECTION / ViewSide / ViewRotation 구조를 유지한다.
 
