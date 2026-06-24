@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Reflection;
 using CatiaAutoDrawing.Core;
 using CatiaAutoDrawing.Logging;
@@ -205,13 +205,13 @@ public sealed class ViewGenerator : IViewGenerator
 
             _logger.Info($"Front view for projection acquired: {FrontViewName}");
 
-            var topResult = GenerateTopProjectionView(views, frontView);
+            var topResult = GenerateTopProjectionView(firstSheet, views, frontView);
             if (!topResult.IsSuccess)
             {
                 return topResult;
             }
 
-            var rightResult = GenerateRightProjectionView(views, frontView);
+            var rightResult = GenerateRightProjectionView(firstSheet, views, frontView);
             if (!rightResult.IsSuccess)
             {
                 return rightResult;
@@ -237,9 +237,10 @@ public sealed class ViewGenerator : IViewGenerator
         }
     }
 
-    private Result GenerateTopProjectionView(object views, object frontView)
+    private Result GenerateTopProjectionView(object sheet, object views, object frontView)
     {
         return GenerateProjectionView(
+            sheet,
             views,
             frontView,
             TopViewName,
@@ -249,9 +250,10 @@ public sealed class ViewGenerator : IViewGenerator
             FrontViewY + ProjectionViewOffsetY);
     }
 
-    private Result GenerateRightProjectionView(object views, object frontView)
+    private Result GenerateRightProjectionView(object sheet, object views, object frontView)
     {
         return GenerateProjectionView(
+            sheet,
             views,
             frontView,
             RightViewName,
@@ -262,6 +264,7 @@ public sealed class ViewGenerator : IViewGenerator
     }
 
     private Result GenerateProjectionView(
+        object sheet,
         object views,
         object frontView,
         string viewName,
@@ -274,6 +277,22 @@ public sealed class ViewGenerator : IViewGenerator
 
         try
         {
+            var frontGenerativeBehavior = GetComProperty(frontView, "GenerativeBehavior");
+            if (frontGenerativeBehavior is null)
+            {
+                var message = $"{displayName} projection view generation failed: FRONT_VIEW generative behavior does not exist.";
+                _logger.Error(message);
+                return Result.Failure(message);
+            }
+
+            _logger.Info("Creating actual generative projection view from FRONT_VIEW.");
+            _logger.Info($"Front generative behavior type: {frontGenerativeBehavior.GetType().FullName ?? frontGenerativeBehavior.GetType().Name}");
+            _logger.Info("Projection creation method: DrawingViews.Add + DrawingViewGenerativeBehavior.DefineProjectionView");
+
+            _logger.Info("Projection view update started.");
+            InvokeComMethod(frontGenerativeBehavior, "Update");
+            _logger.Info("Projection view update completed.");
+
             var projectionView = InvokeComMethod(views, "Add", viewName);
             if (projectionView is null)
             {
@@ -284,17 +303,23 @@ public sealed class ViewGenerator : IViewGenerator
 
             _logger.Info($"{displayName} projection view created.");
 
+            var frontScale = Convert.ToDouble(GetComProperty(frontView, "Scale") ?? 1.0);
             SetComProperty(projectionView, "Name", viewName);
             _logger.Info($"{displayName} projection view name set: {viewName}");
+            SetComProperty(projectionView, "x", x);
+            SetComProperty(projectionView, "y", y);
+            SetComProperty(projectionView, "Scale", frontScale);
+            _logger.Info($"{displayName} projection view positioned.");
 
-            var frontGenerativeBehavior = GetComProperty(frontView, "GenerativeBehavior");
             var projectionGenerativeBehavior = GetComProperty(projectionView, "GenerativeBehavior");
-            if (frontGenerativeBehavior is null || projectionGenerativeBehavior is null)
+            if (projectionGenerativeBehavior is null)
             {
                 var message = $"{displayName} projection view generative behavior does not exist.";
                 _logger.Error(message);
                 return Result.Failure(message);
             }
+
+            _logger.Info($"Projection generative behavior type: {projectionGenerativeBehavior.GetType().FullName ?? projectionGenerativeBehavior.GetType().Name}");
 
             InvokeComMethod(
                 projectionGenerativeBehavior,
@@ -302,13 +327,21 @@ public sealed class ViewGenerator : IViewGenerator
                 frontGenerativeBehavior,
                 projectionViewType);
 
-            var frontScale = Convert.ToDouble(GetComProperty(frontView, "Scale") ?? 1.0);
-            SetComProperty(projectionView, "x", x);
-            SetComProperty(projectionView, "y", y);
-            SetComProperty(projectionView, "Scale", frontScale);
-            _logger.Info($"{displayName} projection view positioned.");
-
+            _logger.Info("Projection view update started.");
             InvokeComMethod(projectionGenerativeBehavior, "Update");
+            _logger.Info("Projection view update completed.");
+
+            _logger.Info("Sheet update started.");
+            InvokeComMethod(sheet, "Update");
+            _logger.Info("Sheet update completed.");
+
+            if (!TryValidateProjectionViewHasGeometry(projectionView, displayName))
+            {
+                var message = $"{displayName} projection view generation did not create visible geometry.";
+                _logger.Error("Projection view generation did not create visible geometry.");
+                return Result.Failure(message);
+            }
+
             return Result.Success();
         }
         catch (Exception ex)
@@ -325,6 +358,75 @@ public sealed class ViewGenerator : IViewGenerator
             }
 
             return Result.Failure(message);
+        }
+    }
+
+private bool TryValidateProjectionViewHasGeometry(object projectionView, string displayName)
+    {
+        if (!TryGetDrawingViewSize(projectionView, out var size))
+        {
+            _logger.Error("Projection view appears to be empty after update.");
+            return false;
+        }
+
+        var width = Math.Abs(size[1] - size[0]);
+        var height = Math.Abs(size[3] - size[2]);
+        _logger.Info($"{displayName} projection view size: {FormatArray(size)}");
+
+        if (width < 0.000001 || height < 0.000001)
+        {
+            _logger.Error("Projection view appears to be empty after update.");
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool TryGetDrawingViewSize(object drawingView, out double[] size)
+    {
+        size = Array.Empty<double>();
+        var args = new object[] { 0.0, 0.0, 0.0, 0.0 };
+        var modifiers = new ParameterModifier(4);
+        for (var index = 0; index < 4; index++)
+        {
+            modifiers[index] = true;
+        }
+
+        try
+        {
+            drawingView.GetType().InvokeMember(
+                "Size",
+                BindingFlags.InvokeMethod,
+                binder: null,
+                target: drawingView,
+                args: args,
+                modifiers: new[] { modifiers },
+                culture: null,
+                namedParameters: null);
+
+            size = new[]
+            {
+                Convert.ToDouble(args[0]),
+                Convert.ToDouble(args[1]),
+                Convert.ToDouble(args[2]),
+                Convert.ToDouble(args[3])
+            };
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            var rootCause = ExceptionUtils.GetRootCause(ex);
+            var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
+
+            _logger.Error(ex, "Projection view size validation failed.");
+            _logger.Error($"Root cause: {rootCause.Message}");
+            if (!string.IsNullOrWhiteSpace(comErrorCode))
+            {
+                _logger.Error($"Root COM error: {comErrorCode}");
+            }
+
+            return false;
         }
     }
 
@@ -1078,10 +1180,3 @@ public sealed class ViewGenerator : IViewGenerator
         public DirectionVector TopVector { get; }
     }
 }
-
-
-
-
-
-
-

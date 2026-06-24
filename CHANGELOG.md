@@ -1,5 +1,10 @@
-﻿# Changelog
+# Changelog
 
+## [0.0.16] - STEP 5 Projection View Validation
+
+- Improved Projection View generation diagnostics around FRONT_VIEW generative behavior and sheet updates.
+- Added projection view size validation so empty TOP_VIEW/RIGHT_VIEW results fail STEP 5 instead of reporting success.
+- Kept Marker based Front View orientation and removed Global Axis UI/config/context unchanged.
 ## [0.0.15] - STEP 5 Projection Views
 
 - Added Top and Right Projection View generation from FRONT_VIEW in ViewGenerator.
@@ -96,12 +101,3 @@
 - Added placeholder modules.
 - Added configuration files.
 - Added documentation files.
-
-
-
-
-
-
-
-
-
