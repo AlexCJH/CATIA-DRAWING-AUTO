@@ -1,5 +1,10 @@
 ﻿# Changelog
 
+## [0.0.13] - STEP 4 View Side and Rotation Correction
+
+- Added View Side and View Rotation options for marker based Front View correction.
+- Kept MAIN_VIEW_PLANE as the viewed face source and TOP_DIRECTION as the base 0 degree up direction.
+- Applied 0/90/180/270 rotation mapping through viewRight and viewUp vectors without changing GetPlane/GetDirection dynamic ref extraction.
 ## [0.0.12] - STEP 4-1B DefineFrontView Vector Mapping
 
 - Changed DefineFrontView mapping to use viewRight and viewUp vectors instead of passing the MAIN_VIEW_PLANE normal directly.
@@ -79,6 +84,7 @@
 - Added placeholder modules.
 - Added configuration files.
 - Added documentation files.
+
 
 
 

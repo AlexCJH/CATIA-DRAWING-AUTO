@@ -57,6 +57,17 @@ public partial class MainForm : Form
         {
             topDirectionComboBox.SelectedItem = "+Z";
         }
+        viewSideComboBox.SelectedItem = _settings.DefaultViewSide;
+        if (viewSideComboBox.SelectedIndex < 0)
+        {
+            viewSideComboBox.SelectedItem = "Opposite";
+        }
+
+        viewRotationComboBox.SelectedItem = _settings.DefaultViewRotation.ToString();
+        if (viewRotationComboBox.SelectedIndex < 0)
+        {
+            viewRotationComboBox.SelectedItem = "0";
+        }
     }
 
     private void CheckConnectionButton_Click(object? sender, EventArgs e)
@@ -100,6 +111,9 @@ public partial class MainForm : Form
         var drawingSize = Convert.ToString(drawingSizeComboBox.SelectedItem) ?? "A3";
         var frontViewDirection = Convert.ToString(frontViewDirectionComboBox.SelectedItem) ?? "-Y";
         var topDirection = Convert.ToString(topDirectionComboBox.SelectedItem) ?? "+Z";
+        var viewSide = Convert.ToString(viewSideComboBox.SelectedItem) ?? "Opposite";
+        var viewRotationText = Convert.ToString(viewRotationComboBox.SelectedItem) ?? "0";
+        var viewRotation = int.TryParse(viewRotationText, out var parsedViewRotation) ? parsedViewRotation : 0;
 
         var result = _drawingGenerator.Generate(new DrawingGenerationContext
         {
@@ -107,6 +121,8 @@ public partial class MainForm : Form
             DrawingSize = drawingSize,
             FrontViewDirection = frontViewDirection,
             TopDirection = topDirection,
+            ViewSide = viewSide,
+            ViewRotation = viewRotation,
             DrawingTemplates = _settings.DrawingTemplates,
             EnablePdfExport = _settings.EnablePdfExport
         });
@@ -146,4 +162,11 @@ public partial class MainForm : Form
         logTextBox.AppendText(message + Environment.NewLine);
     }
 }
+
+
+
+
+
+
+
 

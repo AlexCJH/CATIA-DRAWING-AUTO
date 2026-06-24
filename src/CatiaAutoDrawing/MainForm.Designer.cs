@@ -1,4 +1,4 @@
-using System.Windows.Forms;
+﻿using System.Windows.Forms;
 
 namespace CatiaAutoDrawing;
 
@@ -18,6 +18,10 @@ partial class MainForm
     private Label frontViewDirectionLabel = null!;
     private ComboBox topDirectionComboBox = null!;
     private Label topDirectionLabel = null!;
+    private ComboBox viewSideComboBox = null!;
+    private Label viewSideLabel = null!;
+    private ComboBox viewRotationComboBox = null!;
+    private Label viewRotationLabel = null!;
     private CheckBox enablePdfExportCheckBox = null!;
     private TextBox logTextBox = null!;
     private Label connectionStatusLabel = null!;
@@ -37,6 +41,10 @@ partial class MainForm
         frontViewDirectionLabel = new Label();
         topDirectionComboBox = new ComboBox();
         topDirectionLabel = new Label();
+        viewSideComboBox = new ComboBox();
+        viewSideLabel = new Label();
+        viewRotationComboBox = new ComboBox();
+        viewRotationLabel = new Label();
         enablePdfExportCheckBox = new CheckBox();
         logTextBox = new TextBox();
         connectionStatusLabel = new Label();
@@ -151,6 +159,36 @@ partial class MainForm
         topDirectionComboBox.Size = new System.Drawing.Size(72, 23);
         topDirectionComboBox.TabIndex = 13;
 
+        viewSideLabel.AutoSize = true;
+        viewSideLabel.Location = new System.Drawing.Point(16, 204);
+        viewSideLabel.Name = "viewSideLabel";
+        viewSideLabel.Size = new System.Drawing.Size(55, 15);
+        viewSideLabel.TabIndex = 15;
+        viewSideLabel.Text = "View side";
+
+        viewSideComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+        viewSideComboBox.FormattingEnabled = true;
+        viewSideComboBox.Items.AddRange(new object[] { "Normal", "Opposite" });
+        viewSideComboBox.Location = new System.Drawing.Point(104, 200);
+        viewSideComboBox.Name = "viewSideComboBox";
+        viewSideComboBox.Size = new System.Drawing.Size(88, 23);
+        viewSideComboBox.TabIndex = 16;
+
+        viewRotationLabel.AutoSize = true;
+        viewRotationLabel.Location = new System.Drawing.Point(216, 204);
+        viewRotationLabel.Name = "viewRotationLabel";
+        viewRotationLabel.Size = new System.Drawing.Size(78, 15);
+        viewRotationLabel.TabIndex = 17;
+        viewRotationLabel.Text = "View rotation";
+
+        viewRotationComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+        viewRotationComboBox.FormattingEnabled = true;
+        viewRotationComboBox.Items.AddRange(new object[] { "0", "90", "180", "270" });
+        viewRotationComboBox.Location = new System.Drawing.Point(312, 200);
+        viewRotationComboBox.Name = "viewRotationComboBox";
+        viewRotationComboBox.Size = new System.Drawing.Size(72, 23);
+        viewRotationComboBox.TabIndex = 18;
+
         enablePdfExportCheckBox.AutoSize = true;
         enablePdfExportCheckBox.Enabled = false;
         enablePdfExportCheckBox.Location = new System.Drawing.Point(592, 174);
@@ -161,19 +199,23 @@ partial class MainForm
         enablePdfExportCheckBox.UseVisualStyleBackColor = true;
 
         logTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-        logTextBox.Location = new System.Drawing.Point(16, 208);
+        logTextBox.Location = new System.Drawing.Point(16, 236);
         logTextBox.Multiline = true;
         logTextBox.Name = "logTextBox";
         logTextBox.ReadOnly = true;
         logTextBox.ScrollBars = ScrollBars.Vertical;
-        logTextBox.Size = new System.Drawing.Size(664, 240);
-        logTextBox.TabIndex = 15;
+        logTextBox.Size = new System.Drawing.Size(664, 212);
+        logTextBox.TabIndex = 19;
 
         AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
         ClientSize = new System.Drawing.Size(696, 464);
         Controls.Add(logTextBox);
         Controls.Add(enablePdfExportCheckBox);
+        Controls.Add(viewRotationComboBox);
+        Controls.Add(viewRotationLabel);
+        Controls.Add(viewSideComboBox);
+        Controls.Add(viewSideLabel);
         Controls.Add(topDirectionComboBox);
         Controls.Add(topDirectionLabel);
         Controls.Add(frontViewDirectionComboBox);
@@ -195,3 +237,6 @@ partial class MainForm
         PerformLayout();
     }
 }
+
+
+

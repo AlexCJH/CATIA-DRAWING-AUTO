@@ -1,4 +1,4 @@
-namespace CatiaAutoDrawing.Config;
+﻿namespace CatiaAutoDrawing.Config;
 
 /// <summary>
 /// Role: Strongly typed model for config/appsettings.json.
@@ -25,6 +25,8 @@ public sealed class AppSettings
     public string DefaultSheetSize { get; set; } = "A3";
     public string DefaultFrontViewDirection { get; set; } = "-Y";
     public string DefaultTopDirection { get; set; } = "+Z";
+    public string DefaultViewSide { get; set; } = "Opposite";
+    public int DefaultViewRotation { get; set; }
     public double DefaultScale { get; set; } = 1.0;
     public string RequiredGeoSetName { get; set; } = "GS_DRAWING_INFO";
     public string MainViewPlaneName { get; set; } = "MAIN_VIEW_PLANE";
@@ -36,3 +38,5 @@ public sealed class AppSettings
     public bool EnablePdfExport { get; set; }
     public Dictionary<string, string> DrawingTemplates { get; set; }
 }
+
+

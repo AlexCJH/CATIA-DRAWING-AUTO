@@ -30,7 +30,9 @@ public sealed class ViewGenerator : IViewGenerator
         object drawingDocument,
         object sourceDocument,
         string frontViewDirection,
-        string topDirection)
+        string topDirection,
+        string viewSide,
+        int viewRotation)
     {
         _logger.Info("Front view generation started.");
         _logger.Info("Marker based view orientation started.");
@@ -43,20 +45,41 @@ public sealed class ViewGenerator : IViewGenerator
                 return Result.Failure(orientationResult.ErrorMessage ?? "Marker based view orientation failed.");
             }
 
-            var frontNormal = orientationResult.Value.FrontVector;
-            var viewUp = orientationResult.Value.TopVector;
-            var viewRight = viewUp.Cross(frontNormal).Normalize();
+            var normalizedViewSide = NormalizeViewSide(viewSide);
+            var normalizedViewRotation = NormalizeViewRotation(viewRotation);
+            var frontNormalBeforeSide = orientationResult.Value.FrontVector.Normalize();
+            var frontNormal = string.Equals(normalizedViewSide, "Opposite", StringComparison.OrdinalIgnoreCase)
+                ? frontNormalBeforeSide.Reverse()
+                : frontNormalBeforeSide;
+            var baseUpSource = orientationResult.Value.TopVector.Normalize();
+            var baseUp = baseUpSource.RemoveComponentAlong(frontNormal).Normalize();
 
-            _logger.Info($"Front normal vector: {frontNormal}");
-            _logger.Info($"View up vector: {viewUp}");
-            _logger.Info($"View right vector: {viewRight}");
+            _logger.Info($"View side selected: {normalizedViewSide}");
+            _logger.Info($"View rotation selected: {normalizedViewRotation}");
+            _logger.Info($"Front normal before side correction: {frontNormalBeforeSide}");
+            _logger.Info($"Front normal after side correction: {frontNormal}");
+            _logger.Info($"Base up vector: {baseUp}");
 
-            if (viewRight.IsZero)
+            if (baseUp.IsZero)
             {
-                const string message = "View right vector is zero after cross product.";
+                const string message = "Base up vector is zero after projecting onto the front plane.";
                 _logger.Error(message);
                 return Result.Failure(message);
             }
+
+            var baseRight = baseUp.Cross(frontNormal).Normalize();
+            _logger.Info($"Base right vector: {baseRight}");
+
+            if (baseRight.IsZero)
+            {
+                const string message = "Base right vector is zero after cross product.";
+                _logger.Error(message);
+                return Result.Failure(message);
+            }
+
+            var (viewUp, viewRight) = ApplyViewRotation(baseUp, baseRight, normalizedViewRotation);
+            _logger.Info($"Rotated view up vector: {viewUp}");
+            _logger.Info($"Rotated view right vector: {viewRight}");
 
             var sheets = GetComProperty(drawingDocument, "Sheets");
             if (sheets is null)
@@ -733,6 +756,44 @@ public sealed class ViewGenerator : IViewGenerator
         return true;
     }
 
+    private static string NormalizeViewSide(string viewSide)
+    {
+        if (string.Equals(viewSide, "Normal", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Normal";
+        }
+
+        if (string.Equals(viewSide, "Opposite", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Opposite";
+        }
+
+        throw new InvalidOperationException($"Unsupported view side value: {viewSide}");
+    }
+
+    private static int NormalizeViewRotation(int viewRotation)
+    {
+        return viewRotation switch
+        {
+            0 or 90 or 180 or 270 => viewRotation,
+            _ => throw new InvalidOperationException($"Unsupported view rotation value: {viewRotation}")
+        };
+    }
+
+    private static (DirectionVector ViewUp, DirectionVector ViewRight) ApplyViewRotation(
+        DirectionVector baseUp,
+        DirectionVector baseRight,
+        int viewRotation)
+    {
+        return viewRotation switch
+        {
+            0 => (baseUp, baseRight),
+            90 => (baseRight, baseUp.Reverse()),
+            180 => (baseUp.Reverse(), baseRight.Reverse()),
+            270 => (baseRight.Reverse(), baseUp),
+            _ => throw new InvalidOperationException($"Unsupported view rotation value: {viewRotation}")
+        };
+    }
     private static string FormatArray(object?[] values)
     {
         return string.Join(", ", Array.ConvertAll(values, value => value?.ToString() ?? "<null>"));
@@ -783,6 +844,21 @@ public sealed class ViewGenerator : IViewGenerator
             return Math.Abs(Dot(other)) < 0.000001;
         }
 
+        public DirectionVector Reverse()
+        {
+            return new DirectionVector(-X, -Y, -Z);
+        }
+
+        public DirectionVector RemoveComponentAlong(DirectionVector normal)
+        {
+            var normalizedNormal = normal.Normalize();
+            var component = Dot(normalizedNormal);
+            return new DirectionVector(
+                X - (component * normalizedNormal.X),
+                Y - (component * normalizedNormal.Y),
+                Z - (component * normalizedNormal.Z));
+        }
+
         public DirectionVector Normalize()
         {
             var length = Length;
@@ -822,4 +898,7 @@ public sealed class ViewGenerator : IViewGenerator
         public DirectionVector TopVector { get; }
     }
 }
+
+
+
 

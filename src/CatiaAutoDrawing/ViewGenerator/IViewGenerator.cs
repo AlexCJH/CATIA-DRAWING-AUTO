@@ -1,4 +1,4 @@
-using CatiaAutoDrawing.Core;
+﻿using CatiaAutoDrawing.Core;
 
 namespace CatiaAutoDrawing.ViewGenerator;
 
@@ -13,5 +13,8 @@ public interface IViewGenerator
         object drawingDocument,
         object sourceDocument,
         string frontViewDirection,
-        string topDirection);
+        string topDirection,
+        string viewSide,
+        int viewRotation);
 }
+

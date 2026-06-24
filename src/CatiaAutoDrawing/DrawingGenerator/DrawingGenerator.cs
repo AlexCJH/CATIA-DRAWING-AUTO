@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using CatiaAutoDrawing.Core;
@@ -116,7 +116,9 @@ public sealed class DrawingGenerator : IDrawingGenerator
                 drawingDocument,
                 activeDocument,
                 context.FrontViewDirection,
-                context.TopDirection);
+                context.TopDirection,
+                context.ViewSide,
+                context.ViewRotation);
 
             var outputFolder = ResolveOutputFolder(context.OutputFolder);
             Directory.CreateDirectory(outputFolder);
@@ -311,3 +313,5 @@ public sealed class DrawingGenerator : IDrawingGenerator
         IntPtr pvReserved,
         [MarshalAs(UnmanagedType.IUnknown)] out object ppunk);
 }
+
+
