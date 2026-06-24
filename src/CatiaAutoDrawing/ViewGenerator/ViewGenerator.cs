@@ -158,6 +158,7 @@ public sealed class ViewGenerator : IViewGenerator
         }
 
         _logger.Info("Required marker found: MAIN_VIEW_PLANE");
+        LogMarkerComInfo("MAIN_VIEW_PLANE", mainViewPlane);
 
         var topDirection = FindMarkerByName(drawingInfoGeoSet, "TOP_DIRECTION");
         if (topDirection is null)
@@ -168,6 +169,7 @@ public sealed class ViewGenerator : IViewGenerator
         }
 
         _logger.Info("Required marker found: TOP_DIRECTION");
+        LogMarkerComInfo("TOP_DIRECTION", topDirection);
 
         var planeReference = InvokeComMethod(part, "CreateReferenceFromObject", mainViewPlane);
         var topReference = InvokeComMethod(part, "CreateReferenceFromObject", topDirection);
@@ -277,6 +279,40 @@ public sealed class ViewGenerator : IViewGenerator
             args: args);
     }
 
+    private static object? InvokeComMethodWithSingleArgument(
+        object comObject,
+        string methodName,
+        object argument)
+    {
+        return comObject.GetType().InvokeMember(
+            methodName,
+            BindingFlags.InvokeMethod,
+            binder: null,
+            target: comObject,
+            args: new[] { argument });
+    }
+
+    private static object? InvokeComMethodWithByRefSingleArgument(
+        object comObject,
+        string methodName,
+        object argument)
+    {
+        var args = new[] { argument };
+
+        var modifiers = new ParameterModifier(1);
+        modifiers[0] = true;
+
+        return comObject.GetType().InvokeMember(
+            methodName,
+            BindingFlags.InvokeMethod,
+            binder: null,
+            target: comObject,
+            args: args,
+            modifiers: new[] { modifiers },
+            culture: null,
+            namedParameters: null);
+    }
+
     private static object? FindHybridBodyByName(object hybridBodies, string targetName)
     {
         var count = Convert.ToInt32(GetComProperty(hybridBodies, "Count"));
@@ -368,42 +404,329 @@ public sealed class ViewGenerator : IViewGenerator
         return null;
     }
 
-    private static bool TryExtractPlaneNormal(object measurable, out DirectionVector normal)
+    private void LogMarkerComInfo(string markerLabel, object marker)
+    {
+        var markerType = marker.GetType().FullName ?? marker.GetType().Name;
+        var markerName = Convert.ToString(TryGetComProperty(marker, "Name")) ?? string.Empty;
+
+        _logger.Info($"{markerLabel} marker type: {markerType}");
+        _logger.Info($"{markerLabel} marker name: {markerName}");
+    }
+
+    private bool TryExtractPlaneNormal(object measurable, out DirectionVector normal)
     {
         normal = default;
 
+        _logger.Info("Extracting MAIN_VIEW_PLANE measurable data...");
+        _logger.Info($"MAIN_VIEW_PLANE measurable type: {measurable.GetType().FullName ?? measurable.GetType().Name}");
+
+        if (!TryGetPlaneDataWithDynamicRef(measurable, out var planeData))
+        {
+            return false;
+        }
+
+        var firstDirection = new DirectionVector(planeData[3], planeData[4], planeData[5]);
+        var secondDirection = new DirectionVector(planeData[6], planeData[7], planeData[8]);
+        var normalCandidate = firstDirection.Cross(secondDirection);
+
+        _logger.Info($"Plane first direction: {firstDirection}");
+        _logger.Info($"Plane second direction: {secondDirection}");
+        _logger.Info($"Plane normal candidate: {normalCandidate}");
+
+        if (normalCandidate.IsZero)
+        {
+            _logger.Error("Plane normal vector is zero after cross product.");
+            return false;
+        }
+
+        normal = normalCandidate.Normalize();
+        return true;
+    }
+
+    private bool TryExtractDirection(object measurable, out DirectionVector direction)
+    {
+        direction = default;
+
+        _logger.Info("Extracting TOP_DIRECTION measurable data...");
+        _logger.Info($"TOP_DIRECTION measurable type: {measurable.GetType().FullName ?? measurable.GetType().Name}");
+
+        if (!TryGetDirectionDataWithDynamicRef(measurable, out var directionData))
+        {
+            return false;
+        }
+
+        var directionCandidate = new DirectionVector(directionData[0], directionData[1], directionData[2]);
+        _logger.Info($"Top direction candidate: {directionCandidate}");
+
+        if (directionCandidate.IsZero)
+        {
+            _logger.Error("Top direction vector is zero.");
+            return false;
+        }
+
+        direction = directionCandidate.Normalize();
+        return true;
+    }
+
+    private bool TryGetPlaneDataWithDynamicRef(object measurable, out double[] planeData)
+    {
+        planeData = Array.Empty<double>();
+
+        if (TryGetPlaneDataWithDynamicRefObjectArray(measurable, out planeData))
+        {
+            return true;
+        }
+
+        if (TryGetPlaneDataWithDynamicRefDoubleArray(measurable, out planeData))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryGetPlaneDataWithDynamicRefObjectArray(object measurable, out double[] planeData)
+    {
+        planeData = Array.Empty<double>();
+
         try
         {
-            var planeData = new double[9];
-            InvokeComMethod(measurable, "GetPlane", planeData);
+            _logger.Info("Calling Measurable.GetPlane with dynamic ref object array...");
+            dynamic measurableDynamic = measurable;
+            object planeDataObject = new object[9];
 
-            var firstDirection = new DirectionVector(planeData[3], planeData[4], planeData[5]);
-            var secondDirection = new DirectionVector(planeData[6], planeData[7], planeData[8]);
-            normal = firstDirection.Cross(secondDirection).Normalize();
-            return !normal.IsZero;
+            measurableDynamic.GetPlane(ref planeDataObject);
+
+            _logger.Info($"GetPlane dynamic object array returned type: {planeDataObject?.GetType().FullName ?? "<null>"}");
+            return TryConvertComArrayToDoubleArray(planeDataObject, 9, "Plane", out planeData);
         }
-        catch
+        catch (Exception ex)
         {
+            var rootCause = ExceptionUtils.GetRootCause(ex);
+            var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
+
+            _logger.Error(ex, "Measurable.GetPlane failed with dynamic ref object array.");
+            _logger.Error($"Root cause: {rootCause.Message}");
+            if (!string.IsNullOrWhiteSpace(comErrorCode))
+            {
+                _logger.Error($"Root COM error: {comErrorCode}");
+            }
+
             return false;
         }
     }
 
-    private static bool TryExtractDirection(object measurable, out DirectionVector direction)
+    private bool TryGetPlaneDataWithDynamicRefDoubleArray(object measurable, out double[] planeData)
     {
-        direction = default;
+        planeData = Array.Empty<double>();
 
         try
         {
-            var directionData = new double[3];
-            InvokeComMethod(measurable, "GetDirection", directionData);
+            _logger.Info("Calling Measurable.GetPlane with dynamic ref double array...");
+            dynamic measurableDynamic = measurable;
+            object planeDataObject = new double[9];
 
-            direction = new DirectionVector(directionData[0], directionData[1], directionData[2]).Normalize();
-            return !direction.IsZero;
+            measurableDynamic.GetPlane(ref planeDataObject);
+
+            _logger.Info($"GetPlane dynamic double array returned type: {planeDataObject?.GetType().FullName ?? "<null>"}");
+            return TryConvertComArrayToDoubleArray(planeDataObject, 9, "Plane", out planeData);
         }
-        catch
+        catch (Exception ex)
         {
+            var rootCause = ExceptionUtils.GetRootCause(ex);
+            var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
+
+            _logger.Error(ex, "Measurable.GetPlane failed with dynamic ref double array.");
+            _logger.Error($"Root cause: {rootCause.Message}");
+            if (!string.IsNullOrWhiteSpace(comErrorCode))
+            {
+                _logger.Error($"Root COM error: {comErrorCode}");
+            }
+
             return false;
         }
+    }
+
+    private bool TryGetDirectionDataWithDynamicRef(object measurable, out double[] directionData)
+    {
+        directionData = Array.Empty<double>();
+
+        if (TryGetDirectionDataWithDynamicRefObjectArray(measurable, out directionData))
+        {
+            return true;
+        }
+
+        if (TryGetDirectionDataWithDynamicRefDoubleArray(measurable, out directionData))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryGetDirectionDataWithDynamicRefObjectArray(object measurable, out double[] directionData)
+    {
+        directionData = Array.Empty<double>();
+
+        try
+        {
+            _logger.Info("Calling Measurable.GetDirection with dynamic ref object array...");
+            dynamic measurableDynamic = measurable;
+            object directionDataObject = new object[3];
+
+            measurableDynamic.GetDirection(ref directionDataObject);
+
+            _logger.Info($"GetDirection dynamic object array returned type: {directionDataObject?.GetType().FullName ?? "<null>"}");
+            return TryConvertComArrayToDoubleArray(directionDataObject, 3, "Direction", out directionData);
+        }
+        catch (Exception ex)
+        {
+            var rootCause = ExceptionUtils.GetRootCause(ex);
+            var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
+
+            _logger.Error(ex, "Measurable.GetDirection failed with dynamic ref object array.");
+            _logger.Error($"Root cause: {rootCause.Message}");
+            if (!string.IsNullOrWhiteSpace(comErrorCode))
+            {
+                _logger.Error($"Root COM error: {comErrorCode}");
+            }
+
+            return false;
+        }
+    }
+
+    private bool TryGetDirectionDataWithDynamicRefDoubleArray(object measurable, out double[] directionData)
+    {
+        directionData = Array.Empty<double>();
+
+        try
+        {
+            _logger.Info("Calling Measurable.GetDirection with dynamic ref double array...");
+            dynamic measurableDynamic = measurable;
+            object directionDataObject = new double[3];
+
+            measurableDynamic.GetDirection(ref directionDataObject);
+
+            _logger.Info($"GetDirection dynamic double array returned type: {directionDataObject?.GetType().FullName ?? "<null>"}");
+            return TryConvertComArrayToDoubleArray(directionDataObject, 3, "Direction", out directionData);
+        }
+        catch (Exception ex)
+        {
+            var rootCause = ExceptionUtils.GetRootCause(ex);
+            var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
+
+            _logger.Error(ex, "Measurable.GetDirection failed with dynamic ref double array.");
+            _logger.Error($"Root cause: {rootCause.Message}");
+            if (!string.IsNullOrWhiteSpace(comErrorCode))
+            {
+                _logger.Error($"Root COM error: {comErrorCode}");
+            }
+
+            return false;
+        }
+    }
+
+    private bool TryConvertComArrayToDoubleArray(object? arrayObject, int expectedLength, string label, out double[] values)
+    {
+        values = Array.Empty<double>();
+
+        if (arrayObject is null)
+        {
+            _logger.Error($"{label} data object is null.");
+            return false;
+        }
+
+        var rawValues = new object?[expectedLength];
+        if (arrayObject is double[] doubleValues)
+        {
+            if (doubleValues.Length < expectedLength)
+            {
+                _logger.Error($"{label} data length is shorter than expected: {doubleValues.Length} < {expectedLength}");
+                return false;
+            }
+
+            for (var index = 0; index < expectedLength; index++)
+            {
+                rawValues[index] = doubleValues[index];
+            }
+        }
+        else if (arrayObject is object[] objectValues)
+        {
+            if (objectValues.Length < expectedLength)
+            {
+                _logger.Error($"{label} data length is shorter than expected: {objectValues.Length} < {expectedLength}");
+                return false;
+            }
+
+            for (var index = 0; index < expectedLength; index++)
+            {
+                rawValues[index] = objectValues[index];
+            }
+        }
+        else if (arrayObject is Array arrayValues)
+        {
+            if (arrayValues.Length < expectedLength)
+            {
+                _logger.Error($"{label} data length is shorter than expected: {arrayValues.Length} < {expectedLength}");
+                return false;
+            }
+
+            for (var index = 0; index < expectedLength; index++)
+            {
+                rawValues[index] = arrayValues.GetValue(index);
+            }
+        }
+        else
+        {
+            _logger.Error($"{label} data has unsupported type: {arrayObject.GetType().FullName}");
+            return false;
+        }
+
+        _logger.Info($"{label} raw data: {FormatArray(rawValues)}");
+        var convertedValues = new double[expectedLength];
+
+        for (var index = 0; index < expectedLength; index++)
+        {
+            var value = rawValues[index];
+            if (value is null)
+            {
+                _logger.Error($"{label} raw data index {index} is null.");
+                return false;
+            }
+
+            try
+            {
+                convertedValues[index] = Convert.ToDouble(value);
+            }
+            catch (Exception ex)
+            {
+                var rootCause = ExceptionUtils.GetRootCause(ex);
+                var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
+
+                _logger.Error(ex, $"Failed to convert {label} raw data index {index}: {value} ({value.GetType().FullName})");
+                _logger.Error($"Root cause: {rootCause.Message}");
+                if (!string.IsNullOrWhiteSpace(comErrorCode))
+                {
+                    _logger.Error($"Root COM error: {comErrorCode}");
+                }
+
+                return false;
+            }
+        }
+
+        values = convertedValues;
+        _logger.Info($"{label} converted data: {FormatArray(values)}");
+        return true;
+    }
+
+    private static string FormatArray(object?[] values)
+    {
+        return string.Join(", ", Array.ConvertAll(values, value => value?.ToString() ?? "<null>"));
+    }
+
+    private static string FormatArray(double[] values)
+    {
+        return string.Join(", ", Array.ConvertAll(values, value => value.ToString("0.######")));
     }
 
     private readonly struct DirectionVector
@@ -485,4 +808,3 @@ public sealed class ViewGenerator : IViewGenerator
         public DirectionVector TopVector { get; }
     }
 }
-

@@ -1,5 +1,14 @@
 ﻿# Changelog
 
+## [0.0.11] - STEP 4-1B GetPlane Variant Array Experiment
+- Added dynamic ref object[] and double[] fallback experiments for GetPlane/GetDirection output arrays.
+- Updated GetPlane/GetDirection experiment to pass object arrays as ByRef single COM arguments.
+- Updated GetPlane/GetDirection experiment to pass object arrays as a single COM argument instead of expanded params.
+
+- Changed MAIN_VIEW_PLANE Measurable.GetPlane argument from double[] to object[] for CATIA COM Variant/SafeArray compatibility testing.
+- Changed TOP_DIRECTION Measurable.GetDirection argument from double[] to object[].
+- Added null index and Convert.ToDouble failure diagnostics for measurable result arrays.
+- Updated MainForm drawing button log text to avoid duplicate DrawingGenerator request logs.
 ## [0.0.10] - STEP 4-1B Marker Based Front View Direction
 
 - Added marker based Front View orientation using GS_DRAWING_INFO markers.
@@ -66,4 +75,8 @@
 - Added placeholder modules.
 - Added configuration files.
 - Added documentation files.
+
+
+
+
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Windows.Forms;
 using CatiaAutoDrawing.CatiaConnection;
 using CatiaAutoDrawing.Config;
@@ -96,7 +96,7 @@ public partial class MainForm : Form
 
     private void RunDrawingButton_Click(object? sender, EventArgs e)
     {
-        _logger.Info("Drawing generation requested.");
+        _logger.Info("Drawing generation button clicked.");
         var drawingSize = Convert.ToString(drawingSizeComboBox.SelectedItem) ?? "A3";
         var frontViewDirection = Convert.ToString(frontViewDirectionComboBox.SelectedItem) ?? "-Y";
         var topDirection = Convert.ToString(topDirectionComboBox.SelectedItem) ?? "+Z";
@@ -146,3 +146,4 @@ public partial class MainForm : Form
         logTextBox.AppendText(message + Environment.NewLine);
     }
 }
+
