@@ -1,4 +1,4 @@
-# Project Direction
+﻿# Project Direction
 
 ## 최종 목표
 
@@ -74,3 +74,8 @@ templates/STD_A1_TEMPLATE.CATDrawing
 ## STEP 4-1A 방향
 
 STEP 4-1A는 `MAIN_VIEW_PLANE` / `TOP_DIRECTION` 자동 해석을 구현하지 않는다. 사용자가 UI에서 선택한 Front View Direction과 Top Direction을 벡터로 변환해 CATIA Front View 방향 지정 API 동작을 검증한다.
+
+## STEP 4-1B Marker 기반 방향
+
+Global XYZ 방향 선택 방식은 실제 부품의 도면 기준면이 CATIA Global 축과 평행하지 않은 경우 한계가 있으므로 보조 기능으로만 사용한다. 최종 Front View 방향 제어 원칙은 GS_DRAWING_INFO 안의 MAIN_VIEW_PLANE normal vector와 TOP_DIRECTION direction vector를 사용하는 Marker 기반 방식이다.
+

@@ -1,4 +1,4 @@
-# Codex Development Rules
+﻿# Codex Development Rules
 
 - 한 번에 하나의 기능만 구현한다.
 - 기존 폴더 구조를 임의로 변경하지 않는다.
@@ -19,3 +19,5 @@
 - View 방향 선택값 변환과 방향 적용 로직은 반드시 `ViewGenerator`에서만 처리한다.
 - CATIA API 호출 실패 시 `TargetInvocationException`의 `InnerException`과 `COMException.ErrorCode`를 반드시 로그에 남긴다.
 - 예외를 `Exception has been thrown by the target of an invocation.`만 출력하고 끝내지 않는다.
+- View 방향의 최종 원칙은 Global Axis가 아니라 `GS_DRAWING_INFO`의 `MAIN_VIEW_PLANE` + `TOP_DIRECTION` Marker 기반이다.
+

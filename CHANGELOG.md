@@ -1,5 +1,12 @@
-# Changelog
+﻿# Changelog
 
+## [0.0.10] - STEP 4-1B Marker Based Front View Direction
+
+- Added marker based Front View orientation using GS_DRAWING_INFO markers.
+- Added MAIN_VIEW_PLANE and TOP_DIRECTION lookup in ViewGenerator.
+- Added SPAWorkbench measurable vector extraction for plane normal and top direction.
+- Applied normalized marker vectors to CATIA DefineFrontView.
+- Documented Global Axis direction selection as an auxiliary workflow and Marker based orientation as the final direction principle.
 ## [0.0.9] - STEP 4-1A Manual Front View Direction
 
 - Added manual Front View Direction and Top Direction selection to MainForm.
@@ -59,3 +66,4 @@
 - Added placeholder modules.
 - Added configuration files.
 - Added documentation files.
+

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Reflection;
 using CatiaAutoDrawing.Core;
 using CatiaAutoDrawing.Logging;
@@ -33,23 +33,18 @@ public sealed class ViewGenerator : IViewGenerator
         string topDirection)
     {
         _logger.Info("Front view generation started.");
-        _logger.Info($"Front view direction selected: {frontViewDirection}");
-        _logger.Info($"Top direction selected: {topDirection}");
+        _logger.Info("Marker based view orientation started.");
 
         try
         {
-            var frontVector = DirectionVector.FromDirection(frontViewDirection);
-            var topVector = DirectionVector.FromDirection(topDirection);
-
-            _logger.Info($"Front view direction vector: {frontVector}");
-            _logger.Info($"Top direction vector: {topVector}");
-
-            if (frontVector.IsParallelTo(topVector))
+            var orientationResult = ResolveMarkerBasedOrientation(sourceDocument);
+            if (!orientationResult.IsSuccess)
             {
-                const string message = "Front View Direction and Top Direction cannot be parallel.";
-                _logger.Error(message);
-                return Result.Failure(message);
+                return Result.Failure(orientationResult.ErrorMessage ?? "Marker based view orientation failed.");
             }
+
+            var frontVector = orientationResult.Value.FrontVector;
+            var topVector = orientationResult.Value.TopVector;
 
             var sheets = GetComProperty(drawingDocument, "Sheets");
             if (sheets is null)
@@ -108,7 +103,7 @@ public sealed class ViewGenerator : IViewGenerator
                     topVector.X,
                     topVector.Y,
                     topVector.Z);
-                _logger.Info("Front view orientation applied.");
+                _logger.Info("Front view orientation applied from markers.");
                 InvokeComMethod(generativeBehavior, "Update");
             }
             else
@@ -135,6 +130,111 @@ public sealed class ViewGenerator : IViewGenerator
         }
     }
 
+    private Result<MarkerOrientation> ResolveMarkerBasedOrientation(object sourceDocument)
+    {
+        var part = TryGetComProperty(sourceDocument, "Part");
+        if (part is null)
+        {
+            const string message = "Marker based orientation requires a CATPart document.";
+            _logger.Error(message);
+            return Result<MarkerOrientation>.Failure(message);
+        }
+
+        var hybridBodies = TryGetComProperty(part, "HybridBodies");
+        var drawingInfoGeoSet = hybridBodies is null ? null : FindHybridBodyByName(hybridBodies, "GS_DRAWING_INFO");
+        if (drawingInfoGeoSet is null)
+        {
+            const string message = "GS_DRAWING_INFO not found.";
+            _logger.Error(message);
+            return Result<MarkerOrientation>.Failure(message);
+        }
+
+        var mainViewPlane = FindMarkerByName(drawingInfoGeoSet, "MAIN_VIEW_PLANE");
+        if (mainViewPlane is null)
+        {
+            const string message = "MAIN_VIEW_PLANE not found.";
+            _logger.Error(message);
+            return Result<MarkerOrientation>.Failure(message);
+        }
+
+        _logger.Info("Required marker found: MAIN_VIEW_PLANE");
+
+        var topDirection = FindMarkerByName(drawingInfoGeoSet, "TOP_DIRECTION");
+        if (topDirection is null)
+        {
+            const string message = "TOP_DIRECTION not found.";
+            _logger.Error(message);
+            return Result<MarkerOrientation>.Failure(message);
+        }
+
+        _logger.Info("Required marker found: TOP_DIRECTION");
+
+        var planeReference = InvokeComMethod(part, "CreateReferenceFromObject", mainViewPlane);
+        var topReference = InvokeComMethod(part, "CreateReferenceFromObject", topDirection);
+        var spaWorkbench = InvokeComMethod(sourceDocument, "GetWorkbench", "SPAWorkbench");
+
+        if (planeReference is null || topReference is null || spaWorkbench is null)
+        {
+            const string message = "Failed to create marker references or SPAWorkbench.";
+            _logger.Error(message);
+            return Result<MarkerOrientation>.Failure(message);
+        }
+
+        var planeMeasurable = InvokeComMethod(spaWorkbench, "GetMeasurable", planeReference);
+        var topMeasurable = InvokeComMethod(spaWorkbench, "GetMeasurable", topReference);
+
+        if (planeMeasurable is null)
+        {
+            const string message = "Failed to extract plane normal vector.";
+            _logger.Error(message);
+            return Result<MarkerOrientation>.Failure(message);
+        }
+
+        if (topMeasurable is null)
+        {
+            const string message = "Failed to extract top direction vector.";
+            _logger.Error(message);
+            return Result<MarkerOrientation>.Failure(message);
+        }
+
+        if (!TryExtractPlaneNormal(planeMeasurable, out var planeNormal))
+        {
+            const string message = "Failed to extract plane normal vector.";
+            _logger.Error(message);
+            return Result<MarkerOrientation>.Failure(message);
+        }
+
+        if (!TryExtractDirection(topMeasurable, out var topVector))
+        {
+            const string message = "Failed to extract top direction vector.";
+            _logger.Error(message);
+            return Result<MarkerOrientation>.Failure(message);
+        }
+
+        planeNormal = planeNormal.Normalize();
+        topVector = topVector.Normalize();
+
+        _logger.Info($"MAIN_VIEW_PLANE normal vector: {planeNormal}");
+        _logger.Info($"TOP_DIRECTION vector: {topVector}");
+
+        if (planeNormal.IsParallelTo(topVector))
+        {
+            const string message = "TOP_DIRECTION is parallel to MAIN_VIEW_PLANE normal.";
+            _logger.Error(message);
+            return Result<MarkerOrientation>.Failure(message);
+        }
+
+        if (!planeNormal.IsPerpendicularTo(topVector))
+        {
+            const string message = "TOP_DIRECTION is not parallel to MAIN_VIEW_PLANE.";
+            _logger.Error(message);
+            return Result<MarkerOrientation>.Failure(message);
+        }
+
+        _logger.Info("Front view orientation source: GS_DRAWING_INFO");
+        return Result<MarkerOrientation>.Success(new MarkerOrientation(planeNormal, topVector));
+    }
+
     private static object? GetComProperty(object comObject, string propertyName)
     {
         return comObject.GetType().InvokeMember(
@@ -143,6 +243,18 @@ public sealed class ViewGenerator : IViewGenerator
             binder: null,
             target: comObject,
             args: null);
+    }
+
+    private static object? TryGetComProperty(object comObject, string propertyName)
+    {
+        try
+        {
+            return GetComProperty(comObject, propertyName);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static void SetComProperty(object comObject, string propertyName, object value)
@@ -165,9 +277,138 @@ public sealed class ViewGenerator : IViewGenerator
             args: args);
     }
 
+    private static object? FindHybridBodyByName(object hybridBodies, string targetName)
+    {
+        var count = Convert.ToInt32(GetComProperty(hybridBodies, "Count"));
+
+        for (var index = 1; index <= count; index++)
+        {
+            var hybridBody = InvokeComMethod(hybridBodies, "Item", index);
+            if (hybridBody is null)
+            {
+                continue;
+            }
+
+            var name = Convert.ToString(GetComProperty(hybridBody, "Name"));
+            if (string.Equals(name, targetName, StringComparison.OrdinalIgnoreCase))
+            {
+                return hybridBody;
+            }
+
+            var childHybridBodies = TryGetComProperty(hybridBody, "HybridBodies");
+            if (childHybridBodies is not null)
+            {
+                var found = FindHybridBodyByName(childHybridBodies, targetName);
+                if (found is not null)
+                {
+                    return found;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static object? FindMarkerByName(object hybridBody, string markerName)
+    {
+        var marker = FindNamedItem(TryGetComProperty(hybridBody, "HybridShapes"), markerName);
+        if (marker is not null)
+        {
+            return marker;
+        }
+
+        var childHybridBodies = TryGetComProperty(hybridBody, "HybridBodies");
+        if (childHybridBodies is null)
+        {
+            return null;
+        }
+
+        var count = Convert.ToInt32(GetComProperty(childHybridBodies, "Count"));
+        for (var index = 1; index <= count; index++)
+        {
+            var childHybridBody = InvokeComMethod(childHybridBodies, "Item", index);
+            if (childHybridBody is null)
+            {
+                continue;
+            }
+
+            marker = FindMarkerByName(childHybridBody, markerName);
+            if (marker is not null)
+            {
+                return marker;
+            }
+        }
+
+        return null;
+    }
+
+    private static object? FindNamedItem(object? collection, string itemName)
+    {
+        if (collection is null)
+        {
+            return null;
+        }
+
+        var count = Convert.ToInt32(GetComProperty(collection, "Count"));
+        for (var index = 1; index <= count; index++)
+        {
+            var item = InvokeComMethod(collection, "Item", index);
+            if (item is null)
+            {
+                continue;
+            }
+
+            var name = Convert.ToString(GetComProperty(item, "Name"));
+            if (string.Equals(name, itemName, StringComparison.OrdinalIgnoreCase))
+            {
+                return item;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool TryExtractPlaneNormal(object measurable, out DirectionVector normal)
+    {
+        normal = default;
+
+        try
+        {
+            var planeData = new double[9];
+            InvokeComMethod(measurable, "GetPlane", planeData);
+
+            var firstDirection = new DirectionVector(planeData[3], planeData[4], planeData[5]);
+            var secondDirection = new DirectionVector(planeData[6], planeData[7], planeData[8]);
+            normal = firstDirection.Cross(secondDirection).Normalize();
+            return !normal.IsZero;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool TryExtractDirection(object measurable, out DirectionVector direction)
+    {
+        direction = default;
+
+        try
+        {
+            var directionData = new double[3];
+            InvokeComMethod(measurable, "GetDirection", directionData);
+
+            direction = new DirectionVector(directionData[0], directionData[1], directionData[2]).Normalize();
+            return !direction.IsZero;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private readonly struct DirectionVector
     {
-        private DirectionVector(double x, double y, double z)
+        public DirectionVector(double x, double y, double z)
         {
             X = x;
             Y = y;
@@ -177,6 +418,8 @@ public sealed class ViewGenerator : IViewGenerator
         public double X { get; }
         public double Y { get; }
         public double Z { get; }
+        public bool IsZero => Length < 0.000001;
+        private double Length => Math.Sqrt((X * X) + (Y * Y) + (Z * Z));
 
         public static DirectionVector FromDirection(string direction)
         {
@@ -194,13 +437,52 @@ public sealed class ViewGenerator : IViewGenerator
 
         public bool IsParallelTo(DirectionVector other)
         {
-            var dotProduct = (X * other.X) + (Y * other.Y) + (Z * other.Z);
-            return Math.Abs(dotProduct) >= 1.0;
+            var cross = Cross(other);
+            return cross.Length < 0.000001;
+        }
+
+        public bool IsPerpendicularTo(DirectionVector other)
+        {
+            return Math.Abs(Dot(other)) < 0.000001;
+        }
+
+        public DirectionVector Normalize()
+        {
+            var length = Length;
+            return length < 0.000001
+                ? new DirectionVector(0.0, 0.0, 0.0)
+                : new DirectionVector(X / length, Y / length, Z / length);
+        }
+
+        public DirectionVector Cross(DirectionVector other)
+        {
+            return new DirectionVector(
+                (Y * other.Z) - (Z * other.Y),
+                (Z * other.X) - (X * other.Z),
+                (X * other.Y) - (Y * other.X));
+        }
+
+        private double Dot(DirectionVector other)
+        {
+            return (X * other.X) + (Y * other.Y) + (Z * other.Z);
         }
 
         public override string ToString()
         {
-            return $"{X:0}, {Y:0}, {Z:0}";
+            return $"{X:0.######}, {Y:0.######}, {Z:0.######}";
         }
     }
+
+    private readonly struct MarkerOrientation
+    {
+        public MarkerOrientation(DirectionVector frontVector, DirectionVector topVector)
+        {
+            FrontVector = frontVector;
+            TopVector = topVector;
+        }
+
+        public DirectionVector FrontVector { get; }
+        public DirectionVector TopVector { get; }
+    }
 }
+

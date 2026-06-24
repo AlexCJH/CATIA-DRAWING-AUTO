@@ -1,4 +1,4 @@
-# MVP Scope
+﻿# MVP Scope
 
 초기 MVP는 아래 범위로 고정한다.
 
@@ -9,6 +9,7 @@ STEP 2: 활성 문서 표식 확인
 STEP 3: CATDrawing 템플릿 열기 및 SaveAs 검증
 STEP 4: 템플릿 CATDrawing에 Front View 1개 생성 후 SaveAs
 STEP 4-1A: Front View 수동 방향 선택 검증
+STEP 4-1B: MAIN_VIEW_PLANE + TOP_DIRECTION Marker 기반 Front View 방향 적용
 ```
 
 ## STEP 3: CATDrawing 템플릿 열기 및 SaveAs 검증
@@ -71,6 +72,31 @@ STEP 4-1A: Front View 수동 방향 선택 검증
 - Section View 생성
 - Dimension 생성
 - PDF 출력
+```
+
+## STEP 4-1B: MAIN_VIEW_PLANE + TOP_DIRECTION Marker 기반 Front View 방향 적용
+
+목표:
+
+1. CATPart의 `GS_DRAWING_INFO` 안에서 `MAIN_VIEW_PLANE`과 `TOP_DIRECTION` 검색
+2. `MAIN_VIEW_PLANE` Reference 획득
+3. `TOP_DIRECTION` Reference 획득
+4. SPAWorkbench Measurable API로 Plane normal vector 추출
+5. SPAWorkbench Measurable API로 Line direction vector 추출
+6. 두 벡터를 Normalize
+7. `TOP_DIRECTION`이 `MAIN_VIEW_PLANE` normal과 평행하면 오류 처리
+8. `TOP_DIRECTION`이 `MAIN_VIEW_PLANE`과 평행하지 않으면 오류 처리
+9. Front View 방향에 Marker 기반 벡터 적용
+
+## STEP 4-1B 제외 항목
+
+```text
+- Projection View 생성
+- Detail View 생성
+- Section View 생성
+- Dimension 생성
+- PDF 출력
+- 표제란 자동 입력
 ```
 
 MVP 밖의 기능은 구현하지 않고 TODO 또는 별도 모듈의 향후 작업으로 남긴다.
