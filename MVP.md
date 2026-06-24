@@ -10,6 +10,7 @@ STEP 3: CATDrawing 템플릿 열기 및 SaveAs 검증
 STEP 4: 템플릿 CATDrawing에 Front View 1개 생성 후 SaveAs
 STEP 4-1A: Front View Global Axis 수동 방향 선택 검증 완료 및 폐기
 STEP 4-1B: MAIN_VIEW_PLANE + TOP_DIRECTION + ViewSide + ViewRotation 기반 Front View 방향 적용
+STEP 5: Projection View 생성
 ```
 
 ## STEP 3: CATDrawing 템플릿 열기 및 SaveAs 검증
@@ -94,6 +95,32 @@ STEP 4-1B: MAIN_VIEW_PLANE + TOP_DIRECTION + ViewSide + ViewRotation 기반 Fron
 - Dimension 생성
 - PDF 출력
 - 표제란 자동 입력
+```
+
+## STEP 5: Projection View 생성
+
+목표:
+
+1. 기존 `FRONT_VIEW` 생성 성공 후 Projection View 생성을 시작한다.
+2. `FRONT_VIEW`를 기준으로 `TOP_VIEW`를 생성한다.
+3. `FRONT_VIEW`를 기준으로 `RIGHT_VIEW`를 생성한다.
+4. `TOP_VIEW`는 `FRONT_VIEW` 위쪽에 임시 고정 좌표로 배치한다.
+5. `RIGHT_VIEW`는 `FRONT_VIEW` 오른쪽에 임시 고정 좌표로 배치한다.
+6. Scale은 `FRONT_VIEW`와 동일하게 유지한다.
+7. Projection View 생성 성공/실패 로그를 Front View 생성 로그와 구분한다.
+8. Projection View 생성 실패 시에도 CATDrawing SaveAs 흐름은 유지한다.
+
+## STEP 5 제외 항목
+
+```text
+- Global Axis 수동 방향 선택 기능 재도입
+- Detail View 생성
+- Section View 생성
+- Dimension 생성
+- PDF 출력
+- 표제란 자동 입력
+- 자동 View 크기 계산
+- 자동 배율 계산
 ```
 
 MVP 밖의 기능은 구현하지 않고 TODO 또는 별도 모듈의 향후 작업으로 남긴다.

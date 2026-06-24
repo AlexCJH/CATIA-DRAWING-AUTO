@@ -118,6 +118,12 @@ public sealed class DrawingGenerator : IDrawingGenerator
                 context.ViewSide,
                 context.ViewRotation);
 
+            Result projectionViewResult = Result.Success();
+            if (frontViewResult.IsSuccess)
+            {
+                _logger.Info("STEP 4 succeeded.");
+                projectionViewResult = _viewGenerator.GenerateProjectionViews(drawingDocument);
+            }
             var outputFolder = ResolveOutputFolder(context.OutputFolder);
             Directory.CreateDirectory(outputFolder);
 
@@ -137,7 +143,14 @@ public sealed class DrawingGenerator : IDrawingGenerator
                 return Result<string>.Failure(message);
             }
 
-            _logger.Info("STEP 4 succeeded.");
+            if (!projectionViewResult.IsSuccess)
+            {
+                var message = projectionViewResult.ErrorMessage ?? "Projection view generation failed.";
+                _logger.Warning("STEP 5 failed, but drawing template copy was saved.");
+                return Result<string>.Failure(message);
+            }
+
+            _logger.Info("STEP 5 succeeded.");
 
             return Result<string>.Success(drawingPath);
         }
@@ -311,6 +324,7 @@ public sealed class DrawingGenerator : IDrawingGenerator
         IntPtr pvReserved,
         [MarshalAs(UnmanagedType.IUnknown)] out object ppunk);
 }
+
 
 
 

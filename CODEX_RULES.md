@@ -23,4 +23,6 @@
 - View 방향 제어에 Global X/Y/Z 수동 선택 방식을 다시 도입하지 않는다.
 - Front View 방향은 Marker 기반 방식만 사용한다.
 - MAIN_VIEW_PLANE / TOP_DIRECTION / ViewSide / ViewRotation 구조를 유지한다.
+- Projection View는 반드시 `ViewGenerator`에서만 생성하고, `DrawingGenerator`는 호출 흐름만 제어한다.
+- Global Axis UI를 다시 도입하지 않는다.
 

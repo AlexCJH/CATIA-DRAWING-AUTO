@@ -13,6 +13,14 @@ namespace CatiaAutoDrawing.ViewGenerator;
 public sealed class ViewGenerator : IViewGenerator
 {
     private const string FrontViewName = "FRONT_VIEW";
+    private const string TopViewName = "TOP_VIEW";
+    private const string RightViewName = "RIGHT_VIEW";
+    private const double FrontViewX = 200.0;
+    private const double FrontViewY = 150.0;
+    private const double ProjectionViewOffsetX = 180.0;
+    private const double ProjectionViewOffsetY = 120.0;
+    private const int CatRightProjectionViewType = 0;
+    private const int CatTopProjectionViewType = 2;
 
     private readonly ILogger _logger;
 
@@ -118,8 +126,8 @@ public sealed class ViewGenerator : IViewGenerator
             SetComProperty(frontView, "Name", FrontViewName);
             _logger.Info($"Front view name set: {FrontViewName}");
 
-            SetComProperty(frontView, "x", 200.0);
-            SetComProperty(frontView, "y", 150.0);
+            SetComProperty(frontView, "x", FrontViewX);
+            SetComProperty(frontView, "y", FrontViewY);
             SetComProperty(frontView, "Scale", 1.0);
             _logger.Info("Front view positioned.");
 
@@ -163,6 +171,193 @@ public sealed class ViewGenerator : IViewGenerator
 
             return Result.Failure(message);
         }
+    }
+
+    public Result GenerateProjectionViews(object drawingDocument)
+    {
+        _logger.Info("Projection view generation started.");
+
+        try
+        {
+            var firstSheet = GetFirstSheet(drawingDocument);
+            if (firstSheet is null)
+            {
+                const string message = "First drawing sheet could not be acquired for projection views.";
+                _logger.Error(message);
+                return Result.Failure(message);
+            }
+
+            var views = GetViews(firstSheet);
+            if (views is null)
+            {
+                const string message = "Drawing views collection does not exist for projection views.";
+                _logger.Error(message);
+                return Result.Failure(message);
+            }
+
+            var frontView = FindDrawingViewByName(views, FrontViewName);
+            if (frontView is null)
+            {
+                const string message = "FRONT_VIEW could not be acquired for projection views.";
+                _logger.Error(message);
+                return Result.Failure(message);
+            }
+
+            _logger.Info($"Front view for projection acquired: {FrontViewName}");
+
+            var topResult = GenerateTopProjectionView(views, frontView);
+            if (!topResult.IsSuccess)
+            {
+                return topResult;
+            }
+
+            var rightResult = GenerateRightProjectionView(views, frontView);
+            if (!rightResult.IsSuccess)
+            {
+                return rightResult;
+            }
+
+            _logger.Info("Projection view generation succeeded.");
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            var rootCause = ExceptionUtils.GetRootCause(ex);
+            var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
+            var message = $"Projection view generation failed: {ex.Message}";
+
+            _logger.Error(ex, message);
+            _logger.Error($"Root cause: {rootCause.Message}");
+            if (!string.IsNullOrWhiteSpace(comErrorCode))
+            {
+                _logger.Error($"Root COM error: {comErrorCode}");
+            }
+
+            return Result.Failure(message);
+        }
+    }
+
+    private Result GenerateTopProjectionView(object views, object frontView)
+    {
+        return GenerateProjectionView(
+            views,
+            frontView,
+            TopViewName,
+            "Top",
+            CatTopProjectionViewType,
+            FrontViewX,
+            FrontViewY + ProjectionViewOffsetY);
+    }
+
+    private Result GenerateRightProjectionView(object views, object frontView)
+    {
+        return GenerateProjectionView(
+            views,
+            frontView,
+            RightViewName,
+            "Right",
+            CatRightProjectionViewType,
+            FrontViewX + ProjectionViewOffsetX,
+            FrontViewY);
+    }
+
+    private Result GenerateProjectionView(
+        object views,
+        object frontView,
+        string viewName,
+        string displayName,
+        int projectionViewType,
+        double x,
+        double y)
+    {
+        _logger.Info($"{displayName} projection view generation started.");
+
+        try
+        {
+            var projectionView = InvokeComMethod(views, "Add", viewName);
+            if (projectionView is null)
+            {
+                var message = $"{displayName} projection view could not be created.";
+                _logger.Error(message);
+                return Result.Failure(message);
+            }
+
+            _logger.Info($"{displayName} projection view created.");
+
+            SetComProperty(projectionView, "Name", viewName);
+            _logger.Info($"{displayName} projection view name set: {viewName}");
+
+            var frontGenerativeBehavior = GetComProperty(frontView, "GenerativeBehavior");
+            var projectionGenerativeBehavior = GetComProperty(projectionView, "GenerativeBehavior");
+            if (frontGenerativeBehavior is null || projectionGenerativeBehavior is null)
+            {
+                var message = $"{displayName} projection view generative behavior does not exist.";
+                _logger.Error(message);
+                return Result.Failure(message);
+            }
+
+            InvokeComMethod(
+                projectionGenerativeBehavior,
+                "DefineProjectionView",
+                frontGenerativeBehavior,
+                projectionViewType);
+
+            var frontScale = Convert.ToDouble(GetComProperty(frontView, "Scale") ?? 1.0);
+            SetComProperty(projectionView, "x", x);
+            SetComProperty(projectionView, "y", y);
+            SetComProperty(projectionView, "Scale", frontScale);
+            _logger.Info($"{displayName} projection view positioned.");
+
+            InvokeComMethod(projectionGenerativeBehavior, "Update");
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            var rootCause = ExceptionUtils.GetRootCause(ex);
+            var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
+            var message = $"{displayName} projection view generation failed: {ex.Message}";
+
+            _logger.Error(ex, message);
+            _logger.Error($"Root cause: {rootCause.Message}");
+            if (!string.IsNullOrWhiteSpace(comErrorCode))
+            {
+                _logger.Error($"Root COM error: {comErrorCode}");
+            }
+
+            return Result.Failure(message);
+        }
+    }
+
+    private static object? GetFirstSheet(object drawingDocument)
+    {
+        var sheets = GetComProperty(drawingDocument, "Sheets");
+        return sheets is null ? null : InvokeComMethod(sheets, "Item", 1);
+    }
+
+    private static object? GetViews(object sheet)
+    {
+        return GetComProperty(sheet, "Views");
+    }
+
+    private static object? FindDrawingViewByName(object views, string viewName)
+    {
+        var count = Convert.ToInt32(GetComProperty(views, "Count"));
+        for (var index = 1; index <= count; index++)
+        {
+            var view = InvokeComMethod(views, "Item", index);
+            if (view is null)
+            {
+                continue;
+            }
+
+            var name = Convert.ToString(GetComProperty(view, "Name"));
+            if (string.Equals(name, viewName, StringComparison.OrdinalIgnoreCase))
+            {
+                return view;
+            }
+        }
+
+        return null;
     }
 
     private Result<MarkerOrientation> ResolveMarkerBasedOrientation(object sourceDocument)
@@ -883,6 +1078,8 @@ public sealed class ViewGenerator : IViewGenerator
         public DirectionVector TopVector { get; }
     }
 }
+
+
 
 
 

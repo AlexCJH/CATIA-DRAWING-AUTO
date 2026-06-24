@@ -14,6 +14,8 @@ public interface IViewGenerator
         object sourceDocument,
         string viewSide,
         int viewRotation);
+    Result GenerateProjectionViews(object drawingDocument);
 }
+
 
 

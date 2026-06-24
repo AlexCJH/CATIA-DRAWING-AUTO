@@ -1,5 +1,11 @@
 ﻿# Changelog
 
+## [0.0.15] - STEP 5 Projection Views
+
+- Added Top and Right Projection View generation from FRONT_VIEW in ViewGenerator.
+- Kept DrawingGenerator responsible only for workflow coordination and SaveAs handling.
+- Added STEP 5 logs and failure handling so CATDrawing SaveAs continues when Projection View creation fails.
+- Kept obsolete Global Axis direction UI/config/context removed.
 ## [0.0.14] - STEP 5 Preparation Global Axis UI Cleanup
 
 - Removed obsolete global axis direction UI.
@@ -90,6 +96,7 @@
 - Added placeholder modules.
 - Added configuration files.
 - Added documentation files.
+
 
 
 

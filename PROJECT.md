@@ -40,7 +40,8 @@ templates/STD_A1_TEMPLATE.CATDrawing
 - 회사 표준 CATDrawing 템플릿 열기
 - 선택한 A4/A3/A2/A1 사이즈별 템플릿 선택
 - output 폴더로 CATDrawing SaveAs
-- 향후 열린 템플릿 도면에 View 추가
+- 열린 템플릿 도면에 Marker 기반 Front View 추가
+- Front View 기준 Top / Right Projection View 추가
 - 향후 Detail / Section View 생성
 - 향후 치수 생성
 - 향후 표제란 자동 입력
@@ -66,7 +67,7 @@ templates/STD_A1_TEMPLATE.CATDrawing
 6. 열린 템플릿 도면에 Front View 추가
 7. STEP 4-1A: Global Axis 수동 방향 선택 방식 검증 완료 및 폐기
 8. STEP 4-1B: MAIN_VIEW_PLANE + TOP_DIRECTION + ViewSide + ViewRotation 기반 Front View 방향 제어
-9. Projection View 추가
+9. STEP 5: Front View 기준 Top / Right Projection View 추가
 10. Detail / Section View 추가
 11. 치수 생성
 12. 표제란 입력
@@ -79,4 +80,8 @@ STEP 4-1A의 Global XYZ 수동 방향 선택 방식은 CATIA DefineFrontView API
 ## STEP 4-1B Marker 기반 방향
 
 최종 Front View 방향 제어 방식은 `GS_DRAWING_INFO` 안의 `MAIN_VIEW_PLANE` + `TOP_DIRECTION` marker 기반이다. `MAIN_VIEW_PLANE` normal vector는 정면으로 볼 면을 결정하고, `TOP_DIRECTION` direction vector는 기본 0도 위쪽 방향을 결정한다. 사용자는 UI의 `View Side`로 normal/opposite 면을 선택하고 `View Rotation`의 `0/90/180/270` 값으로 같은 면 안에서 도면상 회전만 보정한다.
+
+## STEP 5 Projection View
+
+STEP 5는 열린 템플릿 CATDrawing에 생성된 `FRONT_VIEW`를 기준으로 `TOP_VIEW`와 `RIGHT_VIEW`를 추가한다. Projection View 생성은 `ViewGenerator`에서만 처리하며, `DrawingGenerator`는 Front View 생성 성공 후 Projection View 생성을 호출하고 SaveAs 흐름을 유지한다. 이번 단계에서는 고정 위치 배치만 사용하며 자동 View 크기 계산, 자동 배율 계산, Detail View, Section View, Dimension, PDF 출력, 표제란 자동 입력은 구현하지 않는다.
 
