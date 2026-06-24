@@ -1,5 +1,9 @@
 ﻿# Changelog
 
+## [0.0.12] - STEP 4-1B DefineFrontView Vector Mapping
+
+- Changed DefineFrontView mapping to use viewRight and viewUp vectors instead of passing the MAIN_VIEW_PLANE normal directly.
+- Added logs for front normal, view up, view right, and DefineFrontView vector arguments.
 ## [0.0.11] - STEP 4-1B GetPlane Variant Array Experiment
 - Added dynamic ref object[] and double[] fallback experiments for GetPlane/GetDirection output arrays.
 - Updated GetPlane/GetDirection experiment to pass object arrays as ByRef single COM arguments.
@@ -75,6 +79,7 @@
 - Added placeholder modules.
 - Added configuration files.
 - Added documentation files.
+
 
 
 

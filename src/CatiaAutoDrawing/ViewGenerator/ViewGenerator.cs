@@ -43,8 +43,20 @@ public sealed class ViewGenerator : IViewGenerator
                 return Result.Failure(orientationResult.ErrorMessage ?? "Marker based view orientation failed.");
             }
 
-            var frontVector = orientationResult.Value.FrontVector;
-            var topVector = orientationResult.Value.TopVector;
+            var frontNormal = orientationResult.Value.FrontVector;
+            var viewUp = orientationResult.Value.TopVector;
+            var viewRight = viewUp.Cross(frontNormal).Normalize();
+
+            _logger.Info($"Front normal vector: {frontNormal}");
+            _logger.Info($"View up vector: {viewUp}");
+            _logger.Info($"View right vector: {viewRight}");
+
+            if (viewRight.IsZero)
+            {
+                const string message = "View right vector is zero after cross product.";
+                _logger.Error(message);
+                return Result.Failure(message);
+            }
 
             var sheets = GetComProperty(drawingDocument, "Sheets");
             if (sheets is null)
@@ -97,12 +109,14 @@ public sealed class ViewGenerator : IViewGenerator
                 InvokeComMethod(
                     generativeBehavior,
                     "DefineFrontView",
-                    frontVector.X,
-                    frontVector.Y,
-                    frontVector.Z,
-                    topVector.X,
-                    topVector.Y,
-                    topVector.Z);
+                    viewRight.X,
+                    viewRight.Y,
+                    viewRight.Z,
+                    viewUp.X,
+                    viewUp.Y,
+                    viewUp.Z);
+                _logger.Info($"DefineFrontView vector 1: {viewRight}");
+                _logger.Info($"DefineFrontView vector 2: {viewUp}");
                 _logger.Info("Front view orientation applied from markers.");
                 InvokeComMethod(generativeBehavior, "Update");
             }
@@ -808,3 +822,4 @@ public sealed class ViewGenerator : IViewGenerator
         public DirectionVector TopVector { get; }
     }
 }
+
