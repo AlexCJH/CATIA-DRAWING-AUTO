@@ -26,8 +26,8 @@ templates/STD_A1_TEMPLATE.CATDrawing
 - `MainForm`: 사용자 입력과 상태 표시만 담당한다.
 - `CatiaConnection`: CATIA 연결과 ActiveDocument 조회를 담당한다.
 - `ModelInspector`: 도면 생성을 위한 모델 표식 검사를 담당한다.
-- `DrawingGenerator`: CATDrawing 템플릿 열기, output 폴더 SaveAs 등 도면 생성 흐름만 담당한다.
-- `ViewGenerator`: 열린 템플릿 도면에 Front / Top / Right View를 추가하는 역할을 담당한다.
+- `DrawingGenerator`: CATDrawing 템플릿 열기, SaveAs, 전체 흐름 제어만 담당한다.
+- `ViewGenerator`: Front View, Projection View, fallback View 생성을 담당한다.
 - `DimensionGenerator`: 향후 Marker 기반 부분 치수 생성만 담당한다.
 - `TitleBlockWriter`: 현재 로드맵에서는 보류한다.
 - `Export`: 현재 로드맵에서는 PDF 출력을 보류한다.
@@ -85,13 +85,19 @@ templates/STD_A1_TEMPLATE.CATDrawing
 - STEP 4-1: `ViewSide` / `ViewRotation` 기반 방향 제어
 - STEP 5: `TOP_VIEW` / `RIGHT_VIEW` 생성
   - 현재 안정 방식: 독립 Generative View 방식
-  - 향후 실험 방식: CATIA API 기반 Projection View 생성
+  - 유지 원칙: fallback으로 계속 보존
 
-## STEP 5 현재 상태
+## STEP 5A CATIA API Projection View 실험
 
-현재 `TOP_VIEW` / `RIGHT_VIEW`는 독립 Generative View 방식으로 안정 생성한다. 이 방식은 현재의 fallback으로 유지한다.
+STEP 5A는 `FRONT_VIEW`를 기준으로 실제 CATIA Projection View API를 다시 시도하는 실험 단계다.
 
-CATIA API 기반 Projection View 생성은 별도 실험 단계인 STEP 5A로 분리한다. STEP 5A에서 `DefineProjectionView` 또는 다른 Projection API 호출 방식을 검증하고, 성공 시 해당 방식으로 전환 가능성을 다시 평가한다.
+현재 원칙은 다음과 같다.
+
+- CATIA API 방식은 먼저 시도한다.
+- API 방식이 명확히 성공하면 해당 결과를 로그로 구분한다.
+- API 방식이 예외 없이 candidate view만 만들었고 자동 검증이 불완전하면 manual verification required 상태로 기록한다.
+- API 방식이 실패하거나 빈 View로 판단되면 기존 독립 Generative View fallback으로 `TOP_VIEW` / `RIGHT_VIEW`를 생성한다.
+- fallback은 API 검증이 끝날 때까지 제거하지 않는다.
 
 ## 초기 개발 로드맵
 

@@ -186,8 +186,8 @@ public sealed class ViewGenerator : IViewGenerator
     public Result GenerateProjectionViews(object drawingDocument, object sourceDocument)
     {
         _logger.Info("Projection view generation started.");
-        _logger.Info("Orthographic view generation started.");
-        _logger.Info("Projection API disabled for this experiment.");
+        _logger.Info("STEP 5A CATIA API Projection View experiment started.");
+        _logger.Info("Stable independent generative view fallback is enabled.");
 
         try
         {
@@ -201,7 +201,7 @@ public sealed class ViewGenerator : IViewGenerator
             var firstSheet = GetFirstSheet(drawingDocument);
             if (firstSheet is null)
             {
-                const string message = "First drawing sheet could not be acquired for orthographic views.";
+                const string message = "First drawing sheet could not be acquired for projection views.";
                 _logger.Error(message);
                 return Result.Failure(message);
             }
@@ -209,7 +209,7 @@ public sealed class ViewGenerator : IViewGenerator
             var views = GetViews(firstSheet);
             if (views is null)
             {
-                const string message = "Drawing views collection does not exist for orthographic views.";
+                const string message = "Drawing views collection does not exist for projection views.";
                 _logger.Error(message);
                 return Result.Failure(message);
             }
@@ -217,30 +217,60 @@ public sealed class ViewGenerator : IViewGenerator
             var frontView = FindDrawingViewByName(views, FrontViewName);
             if (frontView is null)
             {
-                const string message = "FRONT_VIEW could not be acquired for orthographic views.";
+                const string message = "FRONT_VIEW could not be acquired for projection views.";
                 _logger.Error(message);
                 return Result.Failure(message);
             }
 
-            _logger.Info($"Front view for projection acquired: {FrontViewName}");
+            _logger.Info("FRONT_VIEW acquired for CATIA API projection.");
 
             var basis = _lastFrontViewBasis.Value;
             var frontScale = Convert.ToDouble(GetComProperty(frontView, "Scale") ?? 1.0);
+            var apiAttemptResult = TryGenerateProjectionViewsByCatiaApi(firstSheet, views, sourceDocument, frontView, frontScale);
 
-            var topResult = GenerateIndependentTopView(firstSheet, views, sourceDocument, basis, frontScale);
-            if (!topResult.IsSuccess)
+            if (apiAttemptResult.Outcome == ProjectionAttemptOutcome.ApiSuccessConfirmed)
             {
-                return topResult;
+                _logger.Info("STEP 5A succeeded using CATIA API Projection View.");
+                return Result.Success();
             }
 
-            var rightResult = GenerateIndependentRightView(firstSheet, views, sourceDocument, basis, frontScale);
-            if (!rightResult.IsSuccess)
+            if (apiAttemptResult.Outcome == ProjectionAttemptOutcome.ApiCandidateNeedsManualVerification)
             {
-                return rightResult;
+                _logger.Warning("STEP 5A generated candidate views; manual verification required.");
+                return Result.Success();
             }
 
-            _logger.Info("Projection view generation succeeded.");
-            return Result.Success();
+            _logger.Warning("CATIA API projection view generation failed.");
+            if (!string.IsNullOrWhiteSpace(apiAttemptResult.RootCauseMessage))
+            {
+                _logger.Warning($"API failure root cause: {apiAttemptResult.RootCauseMessage}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(apiAttemptResult.ComErrorCode))
+            {
+                _logger.Warning($"API failure COM error: {apiAttemptResult.ComErrorCode}");
+            }
+
+            _logger.Warning("Falling back to independent generative views.");
+
+            var fallbackNames = PrepareFallbackViewNames(views);
+            var fallbackResult = GenerateIndependentProjectionViewsFallback(
+                firstSheet,
+                views,
+                sourceDocument,
+                basis,
+                frontScale,
+                fallbackNames.TopViewName,
+                fallbackNames.RightViewName);
+
+            if (fallbackResult.IsSuccess)
+            {
+                _logger.Info("STEP 5A completed using independent generative fallback.");
+                return Result.Success();
+            }
+
+            _logger.Error("STEP 5A failed. CATIA API projection and fallback both failed.");
+            return Result.Failure(fallbackResult.ErrorMessage ?? apiAttemptResult.ErrorMessage ?? "STEP 5A failed.");
         }
         catch (Exception ex)
         {
@@ -249,14 +279,325 @@ public sealed class ViewGenerator : IViewGenerator
             var message = $"Projection view generation failed: {ex.Message}";
 
             _logger.Error(ex, message);
-            _logger.Warning($"Root cause: {rootCause.Message}");
+            _logger.Error($"Root cause: {rootCause.Message}");
             if (!string.IsNullOrWhiteSpace(comErrorCode))
             {
-                _logger.Warning($"Root COM error: {comErrorCode}");
+                _logger.Error($"Root COM error: {comErrorCode}");
             }
 
             return Result.Failure(message);
         }
+    }
+
+    private ApiProjectionAttemptResult TryGenerateProjectionViewsByCatiaApi(
+        object sheet,
+        object views,
+        object sourceDocument,
+        object frontView,
+        double frontScale)
+    {
+        _logger.Info("Attempting CATIA API projection views from FRONT_VIEW.");
+
+        try
+        {
+            var frontGenerativeBehavior = GetComProperty(frontView, "GenerativeBehavior");
+            if (frontGenerativeBehavior is null)
+            {
+                return ApiProjectionAttemptResult.Failed("FRONT_VIEW generative behavior does not exist.");
+            }
+
+            _logger.Info($"FRONT_VIEW generative behavior type: {frontGenerativeBehavior.GetType().FullName ?? frontGenerativeBehavior.GetType().Name}");
+            _logger.Info("FRONT_VIEW update before API projection started.");
+            InvokeComMethod(frontGenerativeBehavior, "Update");
+            _logger.Info("FRONT_VIEW update before API projection completed.");
+            _logger.Info("Sheet update before API projection started.");
+            InvokeComMethod(sheet, "Update");
+            _logger.Info("Sheet update before API projection completed.");
+
+            var topResult = TryGenerateTopProjectionViewByCatiaApi(sheet, views, sourceDocument, frontGenerativeBehavior, frontScale);
+            if (!topResult.IsSuccess)
+            {
+                return ApiProjectionAttemptResult.Failed(topResult.ErrorMessage, topResult.RootCauseMessage, topResult.ComErrorCode);
+            }
+
+            var rightResult = TryGenerateRightProjectionViewByCatiaApi(sheet, views, sourceDocument, frontGenerativeBehavior, frontScale);
+            if (!rightResult.IsSuccess)
+            {
+                return ApiProjectionAttemptResult.Failed(rightResult.ErrorMessage, rightResult.RootCauseMessage, rightResult.ComErrorCode);
+            }
+
+            if (topResult.Assessment == ProjectionViewAssessmentStatus.ManualVerificationRequired ||
+                rightResult.Assessment == ProjectionViewAssessmentStatus.ManualVerificationRequired)
+            {
+                return ApiProjectionAttemptResult.CandidateNeedsManualVerification("CATIA API generated candidate views; manual verification required.");
+            }
+
+            return ApiProjectionAttemptResult.SuccessConfirmed();
+        }
+        catch (Exception ex)
+        {
+            var rootCause = ExceptionUtils.GetRootCause(ex);
+            var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
+
+            return ApiProjectionAttemptResult.Failed(
+                $"CATIA API projection view generation failed: {ex.Message}",
+                rootCause.Message,
+                comErrorCode);
+        }
+    }
+
+    private ApiProjectionViewResult TryGenerateTopProjectionViewByCatiaApi(
+        object sheet,
+        object views,
+        object sourceDocument,
+        object frontGenerativeBehavior,
+        double scale)
+    {
+        _logger.Info("CATIA API TOP_VIEW generation started.");
+        _logger.Info("CATIA API TOP_VIEW creation method: DrawingViews.Add -> GenerativeBehavior.Document -> DefineProjectionView -> Name/Position/Scale -> Update");
+        _logger.Info($"CATIA API projection type candidate for TOP_VIEW: {CatTopProjectionViewType}");
+
+        return TryGenerateProjectionViewByCatiaApi(
+            sheet,
+            views,
+            sourceDocument,
+            frontGenerativeBehavior,
+            TopViewName,
+            FrontViewX,
+            FrontViewY + ProjectionViewOffsetY,
+            scale,
+            CatTopProjectionViewType);
+    }
+
+    private ApiProjectionViewResult TryGenerateRightProjectionViewByCatiaApi(
+        object sheet,
+        object views,
+        object sourceDocument,
+        object frontGenerativeBehavior,
+        double scale)
+    {
+        _logger.Info("CATIA API RIGHT_VIEW generation started.");
+        _logger.Info("CATIA API RIGHT_VIEW creation method: DrawingViews.Add -> GenerativeBehavior.Document -> DefineProjectionView -> Name/Position/Scale -> Update");
+        _logger.Info($"CATIA API projection type candidate for RIGHT_VIEW: {CatRightProjectionViewType}");
+
+        return TryGenerateProjectionViewByCatiaApi(
+            sheet,
+            views,
+            sourceDocument,
+            frontGenerativeBehavior,
+            RightViewName,
+            FrontViewX + ProjectionViewOffsetX,
+            FrontViewY,
+            scale,
+            CatRightProjectionViewType);
+    }
+
+    private ApiProjectionViewResult TryGenerateProjectionViewByCatiaApi(
+        object sheet,
+        object views,
+        object sourceDocument,
+        object frontGenerativeBehavior,
+        string viewName,
+        double x,
+        double y,
+        double scale,
+        int projectionTypeCandidate)
+    {
+        try
+        {
+            var projectionView = InvokeComMethod(views, "Add", viewName);
+            if (projectionView is null)
+            {
+                return ApiProjectionViewResult.Failed($"CATIA API {viewName} could not be created.");
+            }
+
+            var projectionGenerativeBehavior = GetComProperty(projectionView, "GenerativeBehavior");
+            if (projectionGenerativeBehavior is null)
+            {
+                return ApiProjectionViewResult.Failed($"CATIA API {viewName} generative behavior does not exist.");
+            }
+
+            SetComProperty(projectionGenerativeBehavior, "Document", sourceDocument);
+            InvokeComMethod(
+                projectionGenerativeBehavior,
+                "DefineProjectionView",
+                frontGenerativeBehavior,
+                projectionTypeCandidate);
+
+            SetComProperty(projectionView, "Name", viewName);
+            SetComProperty(projectionView, "x", x);
+            SetComProperty(projectionView, "y", y);
+            SetComProperty(projectionView, "Scale", scale);
+
+            _logger.Info($"CATIA API {viewName} update started.");
+            TryInvokeOptionalComMethod(projectionView, "Update", $"CATIA API {viewName} DrawingView.Update");
+            InvokeComMethod(projectionGenerativeBehavior, "Update");
+            InvokeComMethod(sheet, "Update");
+            _logger.Info($"CATIA API {viewName} update completed.");
+
+            var assessment = AssessApiProjectionView(projectionView, viewName);
+            return assessment switch
+            {
+                ProjectionViewAssessmentStatus.Confirmed => ApiProjectionViewResult.SuccessConfirmed(),
+                ProjectionViewAssessmentStatus.ManualVerificationRequired => ApiProjectionViewResult.CandidateNeedsManualVerification(),
+                ProjectionViewAssessmentStatus.FailedEmpty => ApiProjectionViewResult.Failed($"CATIA API {viewName} appears to be empty after update."),
+                _ => ApiProjectionViewResult.Failed($"CATIA API {viewName} assessment failed.")
+            };
+        }
+        catch (Exception ex)
+        {
+            var rootCause = ExceptionUtils.GetRootCause(ex);
+            var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
+            return ApiProjectionViewResult.Failed(
+                $"CATIA API {viewName} generation failed: {ex.Message}",
+                rootCause.Message,
+                comErrorCode);
+        }
+    }
+
+    private ProjectionViewAssessmentStatus AssessApiProjectionView(object projectionView, string viewName)
+    {
+        if (!TryGetDrawingViewSize(projectionView, out var size))
+        {
+            _logger.Warning($"CATIA API {viewName} size validation could not be confirmed.");
+            _logger.Warning($"CATIA API {viewName} generated candidate view; manual verification required.");
+            return ProjectionViewAssessmentStatus.ManualVerificationRequired;
+        }
+
+        var width = Math.Abs(size[1] - size[0]);
+        var height = Math.Abs(size[3] - size[2]);
+        _logger.Info($"CATIA API {viewName} size: {FormatArray(size)}");
+
+        if (width < 0.000001 || height < 0.000001)
+        {
+            _logger.Error("Projection view appears to be empty after update.");
+            _logger.Error("Projection view generation did not create visible geometry.");
+            return ProjectionViewAssessmentStatus.FailedEmpty;
+        }
+
+        _logger.Info($"CATIA API {viewName} generated successfully.");
+        return ProjectionViewAssessmentStatus.Confirmed;
+    }
+
+    private Result GenerateIndependentProjectionViewsFallback(
+        object sheet,
+        object views,
+        object sourceDocument,
+        ViewBasis frontBasis,
+        double scale,
+        string topViewName,
+        string rightViewName)
+    {
+        _logger.Info("Independent generative fallback started.");
+
+        var topResult = GenerateIndependentTopView(sheet, views, sourceDocument, frontBasis, scale, topViewName);
+        if (!topResult.IsSuccess)
+        {
+            return topResult;
+        }
+
+        var rightResult = GenerateIndependentRightView(sheet, views, sourceDocument, frontBasis, scale, rightViewName);
+        if (!rightResult.IsSuccess)
+        {
+            return rightResult;
+        }
+
+        _logger.Info("Independent generative fallback succeeded.");
+        return Result.Success();
+    }
+
+    private FallbackViewNames PrepareFallbackViewNames(object views)
+    {
+        var topFallbackName = TopViewName;
+        var rightFallbackName = RightViewName;
+
+        if (FindDrawingViewByName(views, TopViewName) is not null)
+        {
+            if (!TryRenameView(views, TopViewName, "TOP_VIEW_API_FAILED"))
+            {
+                topFallbackName = "TOP_VIEW_FALLBACK";
+            }
+        }
+
+        if (FindDrawingViewByName(views, RightViewName) is not null)
+        {
+            if (!TryRenameView(views, RightViewName, "RIGHT_VIEW_API_FAILED"))
+            {
+                rightFallbackName = "RIGHT_VIEW_FALLBACK";
+            }
+        }
+
+        return new FallbackViewNames(topFallbackName, rightFallbackName);
+    }
+
+    private bool TryRenameView(object views, string currentName, string newName)
+    {
+        try
+        {
+            var view = FindDrawingViewByName(views, currentName);
+            if (view is null)
+            {
+                return true;
+            }
+
+            SetComProperty(view, "Name", newName);
+            _logger.Warning($"Renamed API candidate view {currentName} to {newName} before fallback generation.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            var rootCause = ExceptionUtils.GetRootCause(ex);
+            var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
+
+            _logger.Warning($"Failed to rename {currentName} before fallback generation.");
+            _logger.Warning($"Fallback rename root cause: {rootCause.Message}");
+            if (!string.IsNullOrWhiteSpace(comErrorCode))
+            {
+                _logger.Warning($"Fallback rename COM error: {comErrorCode}");
+            }
+
+            return false;
+        }
+    }
+
+    private void TryInvokeOptionalComMethod(object comObject, string methodName, string displayName)
+    {
+        try
+        {
+            InvokeComMethod(comObject, methodName);
+        }
+        catch (Exception ex)
+        {
+            var rootCause = ExceptionUtils.GetRootCause(ex);
+            var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
+
+            _logger.Warning($"{displayName} could not be confirmed.");
+            _logger.Warning($"Optional update root cause: {rootCause.Message}");
+            if (!string.IsNullOrWhiteSpace(comErrorCode))
+            {
+                _logger.Warning($"Optional update COM error: {comErrorCode}");
+            }
+        }
+    }
+
+    private Result GenerateIndependentTopView(
+        object sheet,
+        object views,
+        object sourceDocument,
+        ViewBasis frontBasis,
+        double scale,
+        string viewName)
+    {
+        return CreateGenerativeView(
+            sheet,
+            views,
+            sourceDocument,
+            viewName,
+            frontBasis.FrontRight,
+            frontBasis.FrontNormal.Reverse(),
+            FrontViewX,
+            FrontViewY + ProjectionViewOffsetY,
+            scale);
     }
 
     private Result GenerateIndependentTopView(
@@ -266,15 +607,26 @@ public sealed class ViewGenerator : IViewGenerator
         ViewBasis frontBasis,
         double scale)
     {
+        return GenerateIndependentTopView(sheet, views, sourceDocument, frontBasis, scale, TopViewName);
+    }
+
+    private Result GenerateIndependentRightView(
+        object sheet,
+        object views,
+        object sourceDocument,
+        ViewBasis frontBasis,
+        double scale,
+        string viewName)
+    {
         return CreateGenerativeView(
             sheet,
             views,
             sourceDocument,
-            TopViewName,
-            frontBasis.FrontRight,
+            viewName,
             frontBasis.FrontNormal.Reverse(),
-            FrontViewX,
-            FrontViewY + ProjectionViewOffsetY,
+            frontBasis.FrontUp,
+            FrontViewX + ProjectionViewOffsetX,
+            FrontViewY,
             scale);
     }
 
@@ -285,28 +637,19 @@ public sealed class ViewGenerator : IViewGenerator
         ViewBasis frontBasis,
         double scale)
     {
-        return CreateGenerativeView(
-            sheet,
-            views,
-            sourceDocument,
-            RightViewName,
-            frontBasis.FrontNormal.Reverse(),
-            frontBasis.FrontUp,
-            FrontViewX + ProjectionViewOffsetX,
-            FrontViewY,
-            scale);
+        return GenerateIndependentRightView(sheet, views, sourceDocument, frontBasis, scale, RightViewName);
     }
 
     private void LogIndependentViewTarget(string viewName)
     {
-        if (string.Equals(viewName, TopViewName, StringComparison.OrdinalIgnoreCase))
+        if (viewName.StartsWith(TopViewName, StringComparison.OrdinalIgnoreCase))
         {
             _logger.Info("TOP_VIEW target side: Front view upper side.");
             _logger.Info("TOP_VIEW expected normal: frontUp");
             return;
         }
 
-        if (string.Equals(viewName, RightViewName, StringComparison.OrdinalIgnoreCase))
+        if (viewName.StartsWith(RightViewName, StringComparison.OrdinalIgnoreCase))
         {
             _logger.Info("RIGHT_VIEW target side: Front view right side.");
             _logger.Info("RIGHT_VIEW expected normal: frontRight");
@@ -493,7 +836,6 @@ public sealed class ViewGenerator : IViewGenerator
 
         return null;
     }
-
     private Result<MarkerOrientation> ResolveMarkerBasedOrientation(object sourceDocument)
     {
         var part = TryGetComProperty(sourceDocument, "Part");
@@ -1200,6 +1542,92 @@ public sealed class ViewGenerator : IViewGenerator
         }
     }
 
+    private enum ProjectionAttemptOutcome
+    {
+        ApiSuccessConfirmed,
+        ApiCandidateNeedsManualVerification,
+        ApiFailed
+    }
+
+    private enum ProjectionViewAssessmentStatus
+    {
+        Confirmed,
+        ManualVerificationRequired,
+        FailedEmpty
+    }
+
+    private readonly struct ApiProjectionAttemptResult
+    {
+        private ApiProjectionAttemptResult(
+            ProjectionAttemptOutcome outcome,
+            string? errorMessage,
+            string? rootCauseMessage,
+            string? comErrorCode)
+        {
+            Outcome = outcome;
+            ErrorMessage = errorMessage;
+            RootCauseMessage = rootCauseMessage;
+            ComErrorCode = comErrorCode;
+        }
+
+        public ProjectionAttemptOutcome Outcome { get; }
+        public string? ErrorMessage { get; }
+        public string? RootCauseMessage { get; }
+        public string? ComErrorCode { get; }
+
+        public static ApiProjectionAttemptResult SuccessConfirmed()
+            => new(ProjectionAttemptOutcome.ApiSuccessConfirmed, null, null, null);
+
+        public static ApiProjectionAttemptResult CandidateNeedsManualVerification(string? message)
+            => new(ProjectionAttemptOutcome.ApiCandidateNeedsManualVerification, message, null, null);
+
+        public static ApiProjectionAttemptResult Failed(string? message, string? rootCauseMessage = null, string? comErrorCode = null)
+            => new(ProjectionAttemptOutcome.ApiFailed, message, rootCauseMessage, comErrorCode);
+    }
+
+    private readonly struct ApiProjectionViewResult
+    {
+        private ApiProjectionViewResult(
+            bool isSuccess,
+            ProjectionViewAssessmentStatus assessment,
+            string? errorMessage,
+            string? rootCauseMessage,
+            string? comErrorCode)
+        {
+            IsSuccess = isSuccess;
+            Assessment = assessment;
+            ErrorMessage = errorMessage;
+            RootCauseMessage = rootCauseMessage;
+            ComErrorCode = comErrorCode;
+        }
+
+        public bool IsSuccess { get; }
+        public ProjectionViewAssessmentStatus Assessment { get; }
+        public string? ErrorMessage { get; }
+        public string? RootCauseMessage { get; }
+        public string? ComErrorCode { get; }
+
+        public static ApiProjectionViewResult SuccessConfirmed()
+            => new(true, ProjectionViewAssessmentStatus.Confirmed, null, null, null);
+
+        public static ApiProjectionViewResult CandidateNeedsManualVerification()
+            => new(true, ProjectionViewAssessmentStatus.ManualVerificationRequired, null, null, null);
+
+        public static ApiProjectionViewResult Failed(string? message, string? rootCauseMessage = null, string? comErrorCode = null)
+            => new(false, ProjectionViewAssessmentStatus.FailedEmpty, message, rootCauseMessage, comErrorCode);
+    }
+
+    private readonly struct FallbackViewNames
+    {
+        public FallbackViewNames(string topViewName, string rightViewName)
+        {
+            TopViewName = topViewName;
+            RightViewName = rightViewName;
+        }
+
+        public string TopViewName { get; }
+        public string RightViewName { get; }
+    }
     private readonly struct ViewBasis
     {
         public ViewBasis(DirectionVector frontRight, DirectionVector frontUp, DirectionVector frontNormal)

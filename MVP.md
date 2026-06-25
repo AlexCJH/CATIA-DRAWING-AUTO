@@ -14,62 +14,11 @@ STEP 5A: CATIA Projection View API 재시도
 다음 기능 목표: Marker 기반 부분 치수 생성
 ```
 
-## STEP 3: CATDrawing 템플릿 열기 및 SaveAs 검증
+## STEP 5 현재 상태
 
-목표:
-
-1. 활성 CATPart 또는 CATProduct 확인
-2. 사용자가 도면 사이즈 A4/A3/A2/A1 중 하나 선택
-3. 선택한 사이즈에 해당하는 CATDrawing 템플릿 경로 확인
-4. `CATIA Documents.Open(templatePath)`로 템플릿 열기
-5. `output` 폴더에 `활성문서명_도면사이즈.CATDrawing`으로 `SaveAs`
-6. 로그 출력
-
-## STEP 4: 템플릿 CATDrawing에 Front View 1개 생성 후 SaveAs
-
-목표:
-
-1. CATIA 연결
-2. 활성 CATPart 또는 CATProduct 확인
-3. 템플릿 CATDrawing 열기
-4. 첫 번째 Sheet 획득
-5. 활성 CATPart 또는 CATProduct 기준 Front View 1개 생성 시도
-6. View 이름을 `FRONT_VIEW`로 설정
-7. View 위치를 Sheet 중앙 근처 임시 좌표로 배치
-8. Scale을 `1.0`으로 설정
-9. `output` 폴더에 CATDrawing `SaveAs`
-10. 로그 출력
-
-## STEP 4-1: MAIN_VIEW_PLANE + TOP_DIRECTION + ViewSide + ViewRotation 기반 Front View 방향 적용
-
-목표:
-
-1. CATPart의 `GS_DRAWING_INFO` 안에서 `MAIN_VIEW_PLANE`과 `TOP_DIRECTION` 검색
-2. `MAIN_VIEW_PLANE` Reference 획득
-3. `TOP_DIRECTION` Reference 획득
-4. SPAWorkbench Measurable API로 Plane normal vector 추출
-5. SPAWorkbench Measurable API로 Line direction vector 추출
-6. `MAIN_VIEW_PLANE` normal vector로 정면으로 볼 면 결정
-7. `TOP_DIRECTION` direction vector로 기본 0도 위쪽 방향 결정
-8. `ViewSide`의 `Normal` / `Opposite` 값으로 Plane normal 방향 또는 반대 방향 선택
-9. `ViewRotation`의 `0/90/180/270` 값으로 같은 면을 유지한 채 도면상 회전 보정
-10. `viewRight`와 `viewUp` vector를 `DefineFrontView`에 적용
-
-## STEP 5: TOP_VIEW / RIGHT_VIEW 생성
-
-현재 상태:
-
-1. `TOP_VIEW` / `RIGHT_VIEW`는 현재 독립 Generative View 방식으로 생성 성공 상태다.
-2. CATIA Projection API 방식은 아직 안정 검증이 끝나지 않았고 STEP 5A에서 다시 실험한다.
-3. 현재 독립 Generative View 방식은 안정 fallback으로 유지한다.
-
-현재 목표:
-
-1. 기존 `FRONT_VIEW` 생성 성공 후 `TOP_VIEW` 생성
-2. 기존 `FRONT_VIEW` 생성 성공 후 `RIGHT_VIEW` 생성
-3. 각 View를 동일 Sheet에 고정 위치로 배치
-4. SaveAs 흐름 유지
-5. 생성 성공/실패 로그를 Front View와 구분
+1. `TOP_VIEW` / `RIGHT_VIEW`는 현재 독립 Generative View 방식으로 안정 생성된다.
+2. 이 방식은 현재 stable fallback으로 유지한다.
+3. CATIA Projection API 방식은 STEP 5A에서 별도로 검증한다.
 
 ## STEP 5A: CATIA Projection View API 재시도
 
@@ -77,8 +26,16 @@ STEP 5A: CATIA Projection View API 재시도
 
 1. `FRONT_VIEW` 기준 실제 CATIA Projection View API를 다시 실험한다.
 2. `DefineProjectionView` 또는 다른 Projection API 호출 방식을 검증한다.
-3. 성공 시 API 방식으로 전환 가능성을 검토한다.
-4. 실패 시 현재 독립 Generative View 방식을 fallback으로 유지한다.
+3. API 방식이 명확히 성공하면 해당 결과를 별도 로그 상태로 남긴다.
+4. API 방식이 candidate view만 만들고 자동 검증이 불완전하면 manual verification required 상태로 남긴다.
+5. API 방식이 실패하거나 빈 View로 판단되면 stable fallback인 독립 Generative View 방식으로 전환한다.
+
+상태 구분:
+
+- `ApiSuccessConfirmed`
+- `ApiCandidateNeedsManualVerification`
+- `ApiFailedFallbackSucceeded`
+- `AllFailed`
 
 제외 항목:
 

@@ -146,11 +146,11 @@ public sealed class DrawingGenerator : IDrawingGenerator
             if (!projectionViewResult.IsSuccess)
             {
                 var message = projectionViewResult.ErrorMessage ?? "Projection view generation failed.";
-                _logger.Warning("STEP 5 failed, but drawing template copy was saved.");
+                _logger.Warning("STEP 5A failed, but drawing template copy was saved.");
                 return Result<string>.Failure(message);
             }
 
-            _logger.Info("STEP 5 succeeded.");
+            _logger.Info("Projection view step completed.");
 
             return Result<string>.Success(drawingPath);
         }
