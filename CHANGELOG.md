@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.21] - STEP 6A Direction Update For Color Based Dimension Targets
+
+- Reframed STEP 6A as color based dimension target detection instead of immediate point-to-point dimension creation.
+- Added color based, geometrical set based, and name prefix based dimension target strategies.
+- Clarified that STEP 6A does not create dimensions yet.
+- Kept marker based partial dimension generation as the later implementation goal.
+
 ## [0.0.20] - STEP 5A Manual Verification Complete
 
 - Manually verified CATIA API generated TOP_VIEW and RIGHT_VIEW as Projection View icons in CATIA tree.
@@ -20,15 +27,3 @@
 - Kept independent generative TOP_VIEW/RIGHT_VIEW generation as the current stable fallback.
 - Added STEP 5A for future CATIA API based Projection View experiments.
 - Promoted marker based partial dimension generation as the next major functional direction.
-
-## [0.0.17] - STEP 5 Independent Orthographic Views
-
-- Disabled DefineProjectionView execution for the STEP 5 experiment.
-- Added TOP_VIEW and RIGHT_VIEW generation as independent generative views using DefineFrontView vectors derived from FRONT_VIEW.
-- Reused the stabilized marker based Front View vectors without changing MAIN_VIEW_PLANE/TOP_DIRECTION extraction or ViewSide/ViewRotation logic.
-
-## [0.0.16] - STEP 5 Projection View Validation
-
-- Improved Projection View generation diagnostics around FRONT_VIEW generative behavior and sheet updates.
-- Added projection view size validation so empty TOP_VIEW/RIGHT_VIEW results fail STEP 5 instead of reporting success.
-- Kept Marker based Front View orientation and removed Global Axis UI/config/context unchanged.

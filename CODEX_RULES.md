@@ -25,12 +25,10 @@
 - Front View 방향은 Marker 기반 방식만 사용한다.
 - `MAIN_VIEW_PLANE` / `TOP_DIRECTION` / `ViewSide` / `ViewRotation` 구조를 유지한다.
 - Global Axis UI를 다시 도입하지 않는다.
-- 프로젝트의 다음 기능 목표는 Marker 기반 기본 View와 Marker 기반 부분 치수 생성이다.
+- STEP 6A에서는 실제 치수 생성 API를 구현하지 않는다.
+- STEP 6A는 색상 기반 치수 대상 탐색만 수행한다.
+- 설계자 UX를 우선하여 Point 이름 지정 방식만을 최종 방식으로 고정하지 않는다.
+- 색상 기반, Geometrical Set 기반, 이름 Prefix 기반을 후보로 비교한다.
+- `DimensionGenerator`는 치수 대상 탐색과 치수 생성 실험을 담당하되, `ViewGenerator`에는 치수 로직을 넣지 않는다.
+- 색상 정보 읽기 API가 불안정하면 실험 브랜치에서만 유지한다.
 - Detail View, Section View, PDF 출력, 표제란 자동 입력은 현재 로드맵에서 보류한다.
-- STEP 5A CATIA API Projection View 실험 시 기존 독립 Generative View 방식을 제거하지 말고 fallback으로 유지한다.
-- 검증되지 않은 Projection API를 main의 안정 기능처럼 취급하지 않는다.
-- 검증되지 않은 Projection API 실험은 experiment 성격의 브랜치에서만 수행한다.
-- Projection API 실험 실패 상태를 main에 병합하지 않는다.
-- API 성공이 완전히 검증될 때까지 독립 Generative View fallback을 계속 유지한다.
-- Dimension 구현은 완전 자동 치수가 아니라 Marker 기반 부분 치수에 한정한다.
-- `DimensionGenerator`는 Marker 기반 치수만 담당하고, `ViewGenerator`는 치수 로직을 직접 갖지 않는다.

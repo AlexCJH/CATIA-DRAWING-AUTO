@@ -10,8 +10,6 @@ CATIA V5 R35 자동도면 생성기는 설계자가 3D 모델에 지정한 Marke
 - 독립 Generative View fallback 유지
 - 원본 3D 수정 후 Drawing Update 연동 수동 확인 완료
 
-Detail View, Section View, PDF 출력, 표제란 자동 입력은 현재 보류 상태다.
-
 ## 실행 환경
 
 - Windows
@@ -49,8 +47,16 @@ TOP_DIRECTION
 
 ## 다음 방향
 
-- Marker 기반 부분 치수 생성
-- Detail View / Section View / PDF / 표제란 자동 입력은 현재 보류
+기존 다음 방향이었던 Marker 기반 부분 치수 생성은 바로 구현하지 않는다.
+
+STEP 6A에서는 다음을 먼저 검토한다.
+
+- 색상 지정 형상 탐색
+- 형상 타입 확인
+- 색상 기반 또는 `GS_DIMENSION_TARGET` 기반 치수 대상 지정 가능성 확인
+- 실제 치수 생성은 다음 단계로 이월
+
+장기적으로는 색상 기반 또는 `GS_DIMENSION_TARGET` 기반 치수 대상 탐색 후, Marker 기반 일부 치수 생성으로 확장한다.
 
 ## 주의사항
 

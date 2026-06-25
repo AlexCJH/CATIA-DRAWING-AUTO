@@ -11,7 +11,7 @@ STEP 4: 템플릿 CATDrawing에 Front View 1개 생성 후 SaveAs
 STEP 4-1: MAIN_VIEW_PLANE + TOP_DIRECTION + ViewSide + ViewRotation 기반 Front View 방향 적용
 STEP 5: TOP_VIEW / RIGHT_VIEW 생성
 STEP 5A: CATIA Projection View API 우선 경로 + fallback 유지
-다음 기능 목표: Marker 기반 부분 치수 생성
+다음 기능 목표: 치수 대상 지정 방식 탐색
 ```
 
 ## STEP 5 결과
@@ -20,29 +20,30 @@ STEP 5A: CATIA Projection View API 우선 경로 + fallback 유지
 2. 독립 Generative View 방식은 fallback으로 유지한다.
 3. CATIA 트리 Projection View 아이콘과 원본 3D 수정 후 Drawing Update 연동은 수동 검증 완료 상태다.
 
-## STEP 5A 결과 정리
-
-현재 상태 구분은 다음처럼 해석한다.
-
-- `ApiSuccessConfirmed`: API 경로가 자동 판정 가능한 범위에서 성공
-- `ApiCandidateNeedsManualVerification`: 코드 내부 상태명은 유지 가능하나, 현재 프로젝트 기준 수동 검증은 이미 완료되었다.
-- `ApiFailedFallbackSucceeded`: API 실패 후 fallback 성공
-- `AllFailed`: API와 fallback 모두 실패
-
-현재 운영 원칙:
-
-1. CATIA API Projection View 경로를 기본 시도 경로로 유지한다.
-2. 자동으로 Projection View 아이콘을 확정 판정하지 못하더라도, 수동 검증 완료 사실은 문서와 로그에 반영한다.
-3. API 실패 시 독립 Generative View fallback을 사용한다.
-4. fallback은 제거하지 않는다.
-
-## 다음 기능 목표: Marker 기반 부분 치수 생성
+## STEP 6A: Color-based Dimension Target Detection
 
 목표:
 
-1. 완전 자동 치수 생성은 구현하지 않는다.
-2. 설계자가 지정한 Marker 기반 부분 치수만 생성 대상으로 삼는다.
-3. `KEY_DIMENSION_POINTS`, `DIMENSION_POINT_*`, `DIMENSION_LINE_*`, `DIMENSION_PLANE_*`, `OUTER_DIMENSION_BOX` 계열 Marker 구조를 다음 단계에서 구체화한다.
+1. 색상 지정 형상 탐색
+2. 색상 정보 읽기
+3. 형상 타입 로그 출력
+4. 치수 대상 그룹화 가능성 검토
+
+제외:
+
+```text
+- 실제 치수 생성
+- Detail View
+- Section View
+- PDF
+- 표제란
+- 자동 전체 치수
+```
+
+## 다음 단계 방향
+
+- STEP 6B: 색상 또는 `GS_DIMENSION_TARGET` 기반 대상에서 실제 치수 생성 API 실험
+- STEP 6C: Marker / Color / Folder 혼합 방식의 실무 규칙 확정
 
 ## 보류 또는 취소된 로드맵 항목
 
