@@ -1,10 +1,10 @@
-﻿# Codex Development Rules
+# Codex Development Rules
 
 - 한 번에 하나의 기능만 구현한다.
 - 기존 폴더 구조를 임의로 변경하지 않는다.
 - 기능 추가 전 반드시 `MVP.md`를 확인한다.
 - CATIA API를 추측해서 구현하지 않는다.
-- 검증되지 않은 CATIA API 코드는 TODO 주석으로 유지한다.
+- 검증되지 않은 CATIA API 코드는 TODO 주석 또는 실험 브랜치에서만 유지한다.
 - `MainForm`에 로직을 집중시키지 않는다.
 - `MainForm`에서 CATIA COM API를 직접 호출하지 않는다.
 - 로그 없는 기능은 구현하지 않는다.
@@ -16,13 +16,19 @@
 - 회사 표준 CATDrawing 템플릿 기반 생성 방식을 기본 원칙으로 사용한다.
 - CATDrawing 생성은 반드시 Template Open -> SaveAs 순서로 처리한다.
 - `DrawingGenerator`는 도면 생성 흐름만 담당하고, View 생성은 `ViewGenerator`에 위임한다.
+- Projection View는 반드시 `ViewGenerator`에서만 처리하고, `DrawingGenerator`는 호출 흐름만 제어한다.
 - View 방향 선택값 변환과 방향 적용 로직은 반드시 `ViewGenerator`에서만 처리한다.
 - CATIA API 호출 실패 시 `TargetInvocationException`의 `InnerException`과 `COMException.ErrorCode`를 반드시 로그에 남긴다.
 - 예외를 `Exception has been thrown by the target of an invocation.`만 출력하고 끝내지 않는다.
 - View 방향의 최종 원칙은 Global Axis가 아니라 `GS_DRAWING_INFO`의 `MAIN_VIEW_PLANE` + `TOP_DIRECTION` Marker 기반이다.
 - View 방향 제어에 Global X/Y/Z 수동 선택 방식을 다시 도입하지 않는다.
 - Front View 방향은 Marker 기반 방식만 사용한다.
-- MAIN_VIEW_PLANE / TOP_DIRECTION / ViewSide / ViewRotation 구조를 유지한다.
-- Projection View는 반드시 `ViewGenerator`에서만 생성하고, `DrawingGenerator`는 호출 흐름만 제어한다.
+- `MAIN_VIEW_PLANE` / `TOP_DIRECTION` / `ViewSide` / `ViewRotation` 구조를 유지한다.
 - Global Axis UI를 다시 도입하지 않는다.
-
+- 프로젝트의 다음 기능 목표는 Marker 기반 기본 View와 Marker 기반 부분 치수 생성이다.
+- Detail View, Section View, PDF 출력, 표제란 자동 입력은 현재 로드맵에서 보류한다.
+- STEP 5A CATIA API Projection View 실험 시 기존 독립 Generative View 방식을 제거하지 말고 fallback으로 유지한다.
+- 검증되지 않은 Projection API 실험은 experiment 성격의 브랜치에서만 수행한다.
+- Projection API 실험 실패 상태를 main에 병합하지 않는다.
+- Dimension 구현은 완전 자동 치수가 아니라 Marker 기반 부분 치수에 한정한다.
+- `DimensionGenerator`는 Marker 기반 치수만 담당하고, `ViewGenerator`는 치수 로직을 직접 갖지 않는다.

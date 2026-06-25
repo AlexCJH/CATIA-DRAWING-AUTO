@@ -1,6 +1,6 @@
-﻿# MVP Scope
+# MVP Scope
 
-초기 MVP는 아래 범위로 고정한다.
+초기 MVP와 다음 단계 목표는 아래 범위로 정리한다.
 
 ```text
 STEP 0: CATIA 실행 여부 확인
@@ -8,9 +8,10 @@ STEP 1: 활성 문서 이름 읽기
 STEP 2: 활성 문서 표식 확인
 STEP 3: CATDrawing 템플릿 열기 및 SaveAs 검증
 STEP 4: 템플릿 CATDrawing에 Front View 1개 생성 후 SaveAs
-STEP 4-1A: Front View Global Axis 수동 방향 선택 검증 완료 및 폐기
-STEP 4-1B: MAIN_VIEW_PLANE + TOP_DIRECTION + ViewSide + ViewRotation 기반 Front View 방향 적용
-STEP 5: Projection View 생성
+STEP 4-1: MAIN_VIEW_PLANE + TOP_DIRECTION + ViewSide + ViewRotation 기반 Front View 방향 적용
+STEP 5: TOP_VIEW / RIGHT_VIEW 생성
+STEP 5A: CATIA Projection View API 재시도
+다음 기능 목표: Marker 기반 부분 치수 생성
 ```
 
 ## STEP 3: CATDrawing 템플릿 열기 및 SaveAs 검증
@@ -39,40 +40,7 @@ STEP 5: Projection View 생성
 9. `output` 폴더에 CATDrawing `SaveAs`
 10. 로그 출력
 
-## STEP 4 제외 항목
-
-```text
-- MAIN_VIEW_PLANE 기준 방향 적용
-- TOP_DIRECTION 적용
-- Projection View 생성
-- Detail View 생성
-- Section View 생성
-- Dimension 생성
-- PDF 출력
-- 표제란 자동 입력
-```
-
-## STEP 4-1A: Front View Global Axis 수동 방향 선택 검증 완료 및 폐기
-
-결과:
-
-1. `+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z` Global Axis 수동 선택 방식은 CATIA `DefineFrontView` API 검증용 실험으로 완료했다.
-2. 실제 부품의 도면 기준면이 CATIA Global XYZ축과 평행하지 않은 경우 원하는 정면도를 안정적으로 만들기 어렵다는 한계를 확인했다.
-3. 현재 UI, Config, Context, 생성 흐름에서는 Global Axis 수동 선택 방식을 폐기한다.
-4. Front View 방향 제어는 STEP 4-1B Marker 기반 방식만 사용한다.
-
-## STEP 4-1A 제외 항목
-
-```text
-- Global Axis 수동 선택 방식 재도입
-- Projection View 생성
-- Detail View 생성
-- Section View 생성
-- Dimension 생성
-- PDF 출력
-```
-
-## STEP 4-1B: MAIN_VIEW_PLANE + TOP_DIRECTION + ViewSide + ViewRotation 기반 Front View 방향 적용
+## STEP 4-1: MAIN_VIEW_PLANE + TOP_DIRECTION + ViewSide + ViewRotation 기반 Front View 방향 적용
 
 목표:
 
@@ -87,41 +55,62 @@ STEP 5: Projection View 생성
 9. `ViewRotation`의 `0/90/180/270` 값으로 같은 면을 유지한 채 도면상 회전 보정
 10. `viewRight`와 `viewUp` vector를 `DefineFrontView`에 적용
 
-## STEP 4-1B 제외 항목
-```text
-- Projection View 생성
-- Detail View 생성
-- Section View 생성
-- Dimension 생성
-- PDF 출력
-- 표제란 자동 입력
-```
+## STEP 5: TOP_VIEW / RIGHT_VIEW 생성
 
-## STEP 5: Projection View 생성
+현재 상태:
+
+1. `TOP_VIEW` / `RIGHT_VIEW`는 현재 독립 Generative View 방식으로 생성 성공 상태다.
+2. CATIA Projection API 방식은 아직 안정 검증이 끝나지 않았고 STEP 5A에서 다시 실험한다.
+3. 현재 독립 Generative View 방식은 안정 fallback으로 유지한다.
+
+현재 목표:
+
+1. 기존 `FRONT_VIEW` 생성 성공 후 `TOP_VIEW` 생성
+2. 기존 `FRONT_VIEW` 생성 성공 후 `RIGHT_VIEW` 생성
+3. 각 View를 동일 Sheet에 고정 위치로 배치
+4. SaveAs 흐름 유지
+5. 생성 성공/실패 로그를 Front View와 구분
+
+## STEP 5A: CATIA Projection View API 재시도
 
 목표:
 
-1. 기존 `FRONT_VIEW` 생성 성공 후 Projection View 생성을 시작한다.
-2. `FRONT_VIEW`를 기준으로 `TOP_VIEW`를 생성한다.
-3. `FRONT_VIEW`를 기준으로 `RIGHT_VIEW`를 생성한다.
-4. `TOP_VIEW`는 `FRONT_VIEW` 위쪽에 임시 고정 좌표로 배치한다.
-5. `RIGHT_VIEW`는 `FRONT_VIEW` 오른쪽에 임시 고정 좌표로 배치한다.
-6. Scale은 `FRONT_VIEW`와 동일하게 유지한다.
-7. Projection View 생성 성공/실패 로그를 Front View 생성 로그와 구분한다.
-8. Projection View 생성 실패 시에도 CATDrawing SaveAs 흐름은 유지한다.
+1. `FRONT_VIEW` 기준 실제 CATIA Projection View API를 다시 실험한다.
+2. `DefineProjectionView` 또는 다른 Projection API 호출 방식을 검증한다.
+3. 성공 시 API 방식으로 전환 가능성을 검토한다.
+4. 실패 시 현재 독립 Generative View 방식을 fallback으로 유지한다.
 
-## STEP 5 제외 항목
+제외 항목:
 
 ```text
-- Global Axis 수동 방향 선택 기능 재도입
+- Detail View
+- Section View
+- PDF
+- 표제란 자동 입력
+- 치수 생성
+```
+
+## 다음 기능 목표: Marker 기반 부분 치수 생성
+
+목표:
+
+1. 완전 자동 치수 생성은 구현하지 않는다.
+2. 설계자가 지정한 Marker 기반 부분 치수만 생성 대상으로 삼는다.
+3. `KEY_DIMENSION_POINTS`, `DIMENSION_POINT_*`, `DIMENSION_LINE_*`, `DIMENSION_PLANE_*`, `OUTER_DIMENSION_BOX` 계열 Marker 구조를 다음 단계에서 구체화한다.
+
+## 보류 또는 취소된 로드맵 항목
+
+아래 항목은 현재 MVP/근접 로드맵에서 연기 또는 보류한다.
+
+```text
+- STEP 6~10 기존 자동 View 배치/정렬/검증 중심 계획
+- STEP 12 표제란 자동 입력
 - Detail View 생성
 - Section View 생성
-- Dimension 생성
 - PDF 출력
-- 표제란 자동 입력
 - 자동 View 크기 계산
 - 자동 배율 계산
+- 완전 자동 치수 생성
 ```
 
 MVP 밖의 기능은 구현하지 않고 TODO 또는 별도 모듈의 향후 작업으로 남긴다.
-
