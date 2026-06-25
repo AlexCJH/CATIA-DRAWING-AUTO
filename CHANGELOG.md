@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.0.17] - STEP 5 Independent Orthographic Views
+
+- Disabled DefineProjectionView execution for the STEP 5 experiment.
+- Added TOP_VIEW and RIGHT_VIEW generation as independent generative views using DefineFrontView vectors derived from FRONT_VIEW.
+- Reused the stabilized marker based Front View vectors without changing MAIN_VIEW_PLANE/TOP_DIRECTION extraction or ViewSide/ViewRotation logic.
 ## [0.0.16] - STEP 5 Projection View Validation
 
 - Improved Projection View generation diagnostics around FRONT_VIEW generative behavior and sheet updates.

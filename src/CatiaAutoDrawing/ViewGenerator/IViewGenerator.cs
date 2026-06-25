@@ -1,4 +1,4 @@
-﻿using CatiaAutoDrawing.Core;
+using CatiaAutoDrawing.Core;
 
 namespace CatiaAutoDrawing.ViewGenerator;
 
@@ -14,8 +14,5 @@ public interface IViewGenerator
         object sourceDocument,
         string viewSide,
         int viewRotation);
-    Result GenerateProjectionViews(object drawingDocument);
+    Result GenerateProjectionViews(object drawingDocument, object sourceDocument);
 }
-
-
-

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using CatiaAutoDrawing.Core;
@@ -122,7 +122,7 @@ public sealed class DrawingGenerator : IDrawingGenerator
             if (frontViewResult.IsSuccess)
             {
                 _logger.Info("STEP 4 succeeded.");
-                projectionViewResult = _viewGenerator.GenerateProjectionViews(drawingDocument);
+                projectionViewResult = _viewGenerator.GenerateProjectionViews(drawingDocument, activeDocument);
             }
             var outputFolder = ResolveOutputFolder(context.OutputFolder);
             Directory.CreateDirectory(outputFolder);
@@ -324,7 +324,3 @@ public sealed class DrawingGenerator : IDrawingGenerator
         IntPtr pvReserved,
         [MarshalAs(UnmanagedType.IUnknown)] out object ppunk);
 }
-
-
-
-

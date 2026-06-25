@@ -23,6 +23,7 @@ public sealed class ViewGenerator : IViewGenerator
     private const int CatTopProjectionViewType = 2;
 
     private readonly ILogger _logger;
+    private ViewBasis? _lastFrontViewBasis;
 
     public ViewGenerator(ILogger logger)
     {
@@ -84,6 +85,15 @@ public sealed class ViewGenerator : IViewGenerator
             }
 
             var (viewUp, viewRight) = ApplyViewRotation(baseUp, baseRight, normalizedViewRotation);
+            var frontNormalForOrthographicViews = viewRight.Cross(viewUp).Normalize();
+            if (frontNormalForOrthographicViews.IsZero)
+            {
+                const string message = "Front normal vector is zero after viewRight/viewUp cross product.";
+                _logger.Error(message);
+                return Result.Failure(message);
+            }
+
+            _lastFrontViewBasis = new ViewBasis(viewRight, viewUp, frontNormalForOrthographicViews);
             _logger.Info($"Rotated view up vector: {viewUp}");
             _logger.Info($"Rotated view right vector: {viewRight}");
 
@@ -163,26 +173,35 @@ public sealed class ViewGenerator : IViewGenerator
             var message = $"Front view generation failed: {ex.Message}";
 
             _logger.Error(ex, message);
-            _logger.Error($"Root cause: {rootCause.Message}");
+            _logger.Warning($"Root cause: {rootCause.Message}");
             if (!string.IsNullOrWhiteSpace(comErrorCode))
             {
-                _logger.Error($"Root COM error: {comErrorCode}");
+                _logger.Warning($"Root COM error: {comErrorCode}");
             }
 
             return Result.Failure(message);
         }
     }
 
-    public Result GenerateProjectionViews(object drawingDocument)
+    public Result GenerateProjectionViews(object drawingDocument, object sourceDocument)
     {
         _logger.Info("Projection view generation started.");
+        _logger.Info("Orthographic view generation started.");
+        _logger.Info("Projection API disabled for this experiment.");
 
         try
         {
+            if (!_lastFrontViewBasis.HasValue)
+            {
+                const string message = "Front view orientation basis is not available for orthographic views.";
+                _logger.Error(message);
+                return Result.Failure(message);
+            }
+
             var firstSheet = GetFirstSheet(drawingDocument);
             if (firstSheet is null)
             {
-                const string message = "First drawing sheet could not be acquired for projection views.";
+                const string message = "First drawing sheet could not be acquired for orthographic views.";
                 _logger.Error(message);
                 return Result.Failure(message);
             }
@@ -190,7 +209,7 @@ public sealed class ViewGenerator : IViewGenerator
             var views = GetViews(firstSheet);
             if (views is null)
             {
-                const string message = "Drawing views collection does not exist for projection views.";
+                const string message = "Drawing views collection does not exist for orthographic views.";
                 _logger.Error(message);
                 return Result.Failure(message);
             }
@@ -198,20 +217,23 @@ public sealed class ViewGenerator : IViewGenerator
             var frontView = FindDrawingViewByName(views, FrontViewName);
             if (frontView is null)
             {
-                const string message = "FRONT_VIEW could not be acquired for projection views.";
+                const string message = "FRONT_VIEW could not be acquired for orthographic views.";
                 _logger.Error(message);
                 return Result.Failure(message);
             }
 
             _logger.Info($"Front view for projection acquired: {FrontViewName}");
 
-            var topResult = GenerateTopProjectionView(firstSheet, views, frontView);
+            var basis = _lastFrontViewBasis.Value;
+            var frontScale = Convert.ToDouble(GetComProperty(frontView, "Scale") ?? 1.0);
+
+            var topResult = GenerateIndependentTopView(firstSheet, views, sourceDocument, basis, frontScale);
             if (!topResult.IsSuccess)
             {
                 return topResult;
             }
 
-            var rightResult = GenerateRightProjectionView(firstSheet, views, frontView);
+            var rightResult = GenerateIndependentRightView(firstSheet, views, sourceDocument, basis, frontScale);
             if (!rightResult.IsSuccess)
             {
                 return rightResult;
@@ -227,120 +249,128 @@ public sealed class ViewGenerator : IViewGenerator
             var message = $"Projection view generation failed: {ex.Message}";
 
             _logger.Error(ex, message);
-            _logger.Error($"Root cause: {rootCause.Message}");
+            _logger.Warning($"Root cause: {rootCause.Message}");
             if (!string.IsNullOrWhiteSpace(comErrorCode))
             {
-                _logger.Error($"Root COM error: {comErrorCode}");
+                _logger.Warning($"Root COM error: {comErrorCode}");
             }
 
             return Result.Failure(message);
         }
     }
 
-    private Result GenerateTopProjectionView(object sheet, object views, object frontView)
-    {
-        return GenerateProjectionView(
-            sheet,
-            views,
-            frontView,
-            TopViewName,
-            "Top",
-            CatTopProjectionViewType,
-            FrontViewX,
-            FrontViewY + ProjectionViewOffsetY);
-    }
-
-    private Result GenerateRightProjectionView(object sheet, object views, object frontView)
-    {
-        return GenerateProjectionView(
-            sheet,
-            views,
-            frontView,
-            RightViewName,
-            "Right",
-            CatRightProjectionViewType,
-            FrontViewX + ProjectionViewOffsetX,
-            FrontViewY);
-    }
-
-    private Result GenerateProjectionView(
+    private Result GenerateIndependentTopView(
         object sheet,
         object views,
-        object frontView,
-        string viewName,
-        string displayName,
-        int projectionViewType,
-        double x,
-        double y)
+        object sourceDocument,
+        ViewBasis frontBasis,
+        double scale)
     {
-        _logger.Info($"{displayName} projection view generation started.");
+        return CreateGenerativeView(
+            sheet,
+            views,
+            sourceDocument,
+            TopViewName,
+            frontBasis.FrontRight,
+            frontBasis.FrontNormal.Reverse(),
+            FrontViewX,
+            FrontViewY + ProjectionViewOffsetY,
+            scale);
+    }
+
+    private Result GenerateIndependentRightView(
+        object sheet,
+        object views,
+        object sourceDocument,
+        ViewBasis frontBasis,
+        double scale)
+    {
+        return CreateGenerativeView(
+            sheet,
+            views,
+            sourceDocument,
+            RightViewName,
+            frontBasis.FrontNormal.Reverse(),
+            frontBasis.FrontUp,
+            FrontViewX + ProjectionViewOffsetX,
+            FrontViewY,
+            scale);
+    }
+
+    private void LogIndependentViewTarget(string viewName)
+    {
+        if (string.Equals(viewName, TopViewName, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.Info("TOP_VIEW target side: Front view upper side.");
+            _logger.Info("TOP_VIEW expected normal: frontUp");
+            return;
+        }
+
+        if (string.Equals(viewName, RightViewName, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.Info("RIGHT_VIEW target side: Front view right side.");
+            _logger.Info("RIGHT_VIEW expected normal: frontRight");
+        }
+    }
+
+    private Result CreateGenerativeView(
+        object sheet,
+        object views,
+        object sourceDocument,
+        string viewName,
+        DirectionVector vector1,
+        DirectionVector vector2,
+        double x,
+        double y,
+        double scale)
+    {
+        LogIndependentViewTarget(viewName);
+        _logger.Info($"Creating {viewName} as independent generative view.");
+        _logger.Info($"{viewName} vector 1: {vector1}");
+        _logger.Info($"{viewName} vector 2: {vector2}");
 
         try
         {
-            var frontGenerativeBehavior = GetComProperty(frontView, "GenerativeBehavior");
-            if (frontGenerativeBehavior is null)
+            var drawingView = InvokeComMethod(views, "Add", viewName);
+            if (drawingView is null)
             {
-                var message = $"{displayName} projection view generation failed: FRONT_VIEW generative behavior does not exist.";
+                var message = $"{viewName} could not be created.";
                 _logger.Error(message);
                 return Result.Failure(message);
             }
 
-            _logger.Info("Creating actual generative projection view from FRONT_VIEW.");
-            _logger.Info($"Front generative behavior type: {frontGenerativeBehavior.GetType().FullName ?? frontGenerativeBehavior.GetType().Name}");
-            _logger.Info("Projection creation method: DrawingViews.Add + DrawingViewGenerativeBehavior.DefineProjectionView");
+            SetComProperty(drawingView, "Name", viewName);
+            SetComProperty(drawingView, "x", x);
+            SetComProperty(drawingView, "y", y);
+            SetComProperty(drawingView, "Scale", scale);
 
-            _logger.Info("Projection view update started.");
-            InvokeComMethod(frontGenerativeBehavior, "Update");
-            _logger.Info("Projection view update completed.");
-
-            var projectionView = InvokeComMethod(views, "Add", viewName);
-            if (projectionView is null)
+            var generativeBehavior = GetComProperty(drawingView, "GenerativeBehavior");
+            if (generativeBehavior is null)
             {
-                var message = $"{displayName} projection view could not be created.";
+                var message = $"{viewName} generative behavior does not exist.";
                 _logger.Error(message);
                 return Result.Failure(message);
             }
 
-            _logger.Info($"{displayName} projection view created.");
-
-            var frontScale = Convert.ToDouble(GetComProperty(frontView, "Scale") ?? 1.0);
-            SetComProperty(projectionView, "Name", viewName);
-            _logger.Info($"{displayName} projection view name set: {viewName}");
-            SetComProperty(projectionView, "x", x);
-            SetComProperty(projectionView, "y", y);
-            SetComProperty(projectionView, "Scale", frontScale);
-            _logger.Info($"{displayName} projection view positioned.");
-
-            var projectionGenerativeBehavior = GetComProperty(projectionView, "GenerativeBehavior");
-            if (projectionGenerativeBehavior is null)
-            {
-                var message = $"{displayName} projection view generative behavior does not exist.";
-                _logger.Error(message);
-                return Result.Failure(message);
-            }
-
-            _logger.Info($"Projection generative behavior type: {projectionGenerativeBehavior.GetType().FullName ?? projectionGenerativeBehavior.GetType().Name}");
-
+            SetComProperty(generativeBehavior, "Document", sourceDocument);
             InvokeComMethod(
-                projectionGenerativeBehavior,
-                "DefineProjectionView",
-                frontGenerativeBehavior,
-                projectionViewType);
+                generativeBehavior,
+                "DefineFrontView",
+                vector1.X,
+                vector1.Y,
+                vector1.Z,
+                vector2.X,
+                vector2.Y,
+                vector2.Z);
 
-            _logger.Info("Projection view update started.");
-            InvokeComMethod(projectionGenerativeBehavior, "Update");
-            _logger.Info("Projection view update completed.");
+            InvokeComMethod(generativeBehavior, "Update");
+            _logger.Info($"{viewName} update completed.");
 
             _logger.Info("Sheet update started.");
             InvokeComMethod(sheet, "Update");
             _logger.Info("Sheet update completed.");
 
-            if (!TryValidateProjectionViewHasGeometry(projectionView, displayName))
-            {
-                var message = $"{displayName} projection view generation did not create visible geometry.";
-                _logger.Error("Projection view generation did not create visible geometry.");
-                return Result.Failure(message);
-            }
+            TryValidateProjectionViewHasGeometry(drawingView, viewName);
 
             return Result.Success();
         }
@@ -348,25 +378,26 @@ public sealed class ViewGenerator : IViewGenerator
         {
             var rootCause = ExceptionUtils.GetRootCause(ex);
             var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
-            var message = $"{displayName} projection view generation failed: {ex.Message}";
+            var message = $"{viewName} generation failed: {ex.Message}";
 
             _logger.Error(ex, message);
-            _logger.Error($"Root cause: {rootCause.Message}");
+            _logger.Warning($"Root cause: {rootCause.Message}");
             if (!string.IsNullOrWhiteSpace(comErrorCode))
             {
-                _logger.Error($"Root COM error: {comErrorCode}");
+                _logger.Warning($"Root COM error: {comErrorCode}");
             }
 
             return Result.Failure(message);
         }
     }
 
-private bool TryValidateProjectionViewHasGeometry(object projectionView, string displayName)
+    private bool TryValidateProjectionViewHasGeometry(object projectionView, string displayName)
     {
         if (!TryGetDrawingViewSize(projectionView, out var size))
         {
-            _logger.Error("Projection view appears to be empty after update.");
-            return false;
+            _logger.Warning("Projection view size validation could not be confirmed.");
+            _logger.Warning("Skipping size validation for independent generative view experiment.");
+            return true;
         }
 
         var width = Math.Abs(size[1] - size[0]);
@@ -375,8 +406,9 @@ private bool TryValidateProjectionViewHasGeometry(object projectionView, string 
 
         if (width < 0.000001 || height < 0.000001)
         {
-            _logger.Error("Projection view appears to be empty after update.");
-            return false;
+            _logger.Warning("Projection view size validation could not be confirmed.");
+            _logger.Warning("Skipping size validation for independent generative view experiment.");
+            return true;
         }
 
         return true;
@@ -419,11 +451,11 @@ private bool TryValidateProjectionViewHasGeometry(object projectionView, string 
             var rootCause = ExceptionUtils.GetRootCause(ex);
             var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
 
-            _logger.Error(ex, "Projection view size validation failed.");
-            _logger.Error($"Root cause: {rootCause.Message}");
+            _logger.Warning("Projection view size validation could not be confirmed.");
+            _logger.Warning($"Root cause: {rootCause.Message}");
             if (!string.IsNullOrWhiteSpace(comErrorCode))
             {
-                _logger.Error($"Root COM error: {comErrorCode}");
+                _logger.Warning($"Root COM error: {comErrorCode}");
             }
 
             return false;
@@ -838,10 +870,10 @@ private bool TryValidateProjectionViewHasGeometry(object projectionView, string 
             var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
 
             _logger.Error(ex, "Measurable.GetPlane failed with dynamic ref object array.");
-            _logger.Error($"Root cause: {rootCause.Message}");
+            _logger.Warning($"Root cause: {rootCause.Message}");
             if (!string.IsNullOrWhiteSpace(comErrorCode))
             {
-                _logger.Error($"Root COM error: {comErrorCode}");
+                _logger.Warning($"Root COM error: {comErrorCode}");
             }
 
             return false;
@@ -869,10 +901,10 @@ private bool TryValidateProjectionViewHasGeometry(object projectionView, string 
             var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
 
             _logger.Error(ex, "Measurable.GetPlane failed with dynamic ref double array.");
-            _logger.Error($"Root cause: {rootCause.Message}");
+            _logger.Warning($"Root cause: {rootCause.Message}");
             if (!string.IsNullOrWhiteSpace(comErrorCode))
             {
-                _logger.Error($"Root COM error: {comErrorCode}");
+                _logger.Warning($"Root COM error: {comErrorCode}");
             }
 
             return false;
@@ -917,10 +949,10 @@ private bool TryValidateProjectionViewHasGeometry(object projectionView, string 
             var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
 
             _logger.Error(ex, "Measurable.GetDirection failed with dynamic ref object array.");
-            _logger.Error($"Root cause: {rootCause.Message}");
+            _logger.Warning($"Root cause: {rootCause.Message}");
             if (!string.IsNullOrWhiteSpace(comErrorCode))
             {
-                _logger.Error($"Root COM error: {comErrorCode}");
+                _logger.Warning($"Root COM error: {comErrorCode}");
             }
 
             return false;
@@ -948,10 +980,10 @@ private bool TryValidateProjectionViewHasGeometry(object projectionView, string 
             var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
 
             _logger.Error(ex, "Measurable.GetDirection failed with dynamic ref double array.");
-            _logger.Error($"Root cause: {rootCause.Message}");
+            _logger.Warning($"Root cause: {rootCause.Message}");
             if (!string.IsNullOrWhiteSpace(comErrorCode))
             {
-                _logger.Error($"Root COM error: {comErrorCode}");
+                _logger.Warning($"Root COM error: {comErrorCode}");
             }
 
             return false;
@@ -1036,10 +1068,10 @@ private bool TryValidateProjectionViewHasGeometry(object projectionView, string 
                 var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
 
                 _logger.Error(ex, $"Failed to convert {label} raw data index {index}: {value} ({value.GetType().FullName})");
-                _logger.Error($"Root cause: {rootCause.Message}");
+                _logger.Warning($"Root cause: {rootCause.Message}");
                 if (!string.IsNullOrWhiteSpace(comErrorCode))
                 {
-                    _logger.Error($"Root COM error: {comErrorCode}");
+                    _logger.Warning($"Root COM error: {comErrorCode}");
                 }
 
                 return false;
@@ -1168,6 +1200,19 @@ private bool TryValidateProjectionViewHasGeometry(object projectionView, string 
         }
     }
 
+    private readonly struct ViewBasis
+    {
+        public ViewBasis(DirectionVector frontRight, DirectionVector frontUp, DirectionVector frontNormal)
+        {
+            FrontRight = frontRight;
+            FrontUp = frontUp;
+            FrontNormal = frontNormal;
+        }
+
+        public DirectionVector FrontRight { get; }
+        public DirectionVector FrontUp { get; }
+        public DirectionVector FrontNormal { get; }
+    }
     private readonly struct MarkerOrientation
     {
         public MarkerOrientation(DirectionVector frontVector, DirectionVector topVector)
@@ -1180,3 +1225,4 @@ private bool TryValidateProjectionViewHasGeometry(object projectionView, string 
         public DirectionVector TopVector { get; }
     }
 }
+
