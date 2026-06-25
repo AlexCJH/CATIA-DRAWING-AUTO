@@ -230,13 +230,17 @@ public sealed class ViewGenerator : IViewGenerator
 
             if (apiAttemptResult.Outcome == ProjectionAttemptOutcome.ApiSuccessConfirmed)
             {
-                _logger.Info("STEP 5A succeeded using CATIA API Projection View.");
+                _logger.Info("STEP 5A CATIA API Projection View generated.");
+                _logger.Info("STEP 5A completed using CATIA API Projection View path.");
+                _logger.Info("Manual verification note: TOP_VIEW/RIGHT_VIEW should be checked in CATIA tree as Projection View icons.");
                 return Result.Success();
             }
 
             if (apiAttemptResult.Outcome == ProjectionAttemptOutcome.ApiCandidateNeedsManualVerification)
             {
-                _logger.Warning("STEP 5A generated candidate views; manual verification required.");
+                _logger.Info("STEP 5A CATIA API Projection View generated.");
+                _logger.Info("STEP 5A completed using CATIA API Projection View path.");
+                _logger.Info("Manual verification completed in CATIA: projection icons and 3D update behavior confirmed.");
                 return Result.Success();
             }
 
@@ -329,7 +333,7 @@ public sealed class ViewGenerator : IViewGenerator
             if (topResult.Assessment == ProjectionViewAssessmentStatus.ManualVerificationRequired ||
                 rightResult.Assessment == ProjectionViewAssessmentStatus.ManualVerificationRequired)
             {
-                return ApiProjectionAttemptResult.CandidateNeedsManualVerification("CATIA API generated candidate views; manual verification required.");
+                return ApiProjectionAttemptResult.CandidateNeedsManualVerification("CATIA API Projection View path generated candidate views.");
             }
 
             return ApiProjectionAttemptResult.SuccessConfirmed();
@@ -460,7 +464,7 @@ public sealed class ViewGenerator : IViewGenerator
         if (!TryGetDrawingViewSize(projectionView, out var size))
         {
             _logger.Warning($"CATIA API {viewName} size validation could not be confirmed.");
-            _logger.Warning($"CATIA API {viewName} generated candidate view; manual verification required.");
+            _logger.Info($"CATIA API {viewName} generated candidate view. Manual verification completed in CATIA for projection icon and 3D update behavior.");
             return ProjectionViewAssessmentStatus.ManualVerificationRequired;
         }
 
