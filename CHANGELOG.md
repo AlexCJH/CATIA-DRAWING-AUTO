@@ -1,4 +1,11 @@
-# Changelog
+﻿# Changelog
+
+## [0.0.23] - STEP 6A Geometry Type Detection Diagnostics
+
+- Improved diagnostics for color based dimension target geometry type detection.
+- Added measurable extraction probes for dimension target candidates.
+- Kept color detection and drawing SaveAs flow stable.
+- Did not create Drawing Dimensions in this step.
 
 ## [0.0.22] - STEP 6A Color Based Dimension Target Detection Experiment
 
