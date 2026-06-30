@@ -1,4 +1,18 @@
-# Changelog
+﻿# Changelog
+
+## [0.0.24] - STEP 6B Color Based Surface Distance Dimension Experiment
+
+- Added first Drawing Dimension API experiment using two RED Surface/Face dimension targets.
+- Reused STEP 6A color based dimension target detection.
+- Kept drawing SaveAs flow even when dimension creation fails.
+- Limited STEP 6B to one surface-to-surface distance dimension experiment.
+
+## [0.0.22] - STEP 6A Color Based Dimension Target Detection Experiment
+
+- Added DimensionGenerator experiment for color based dimension target detection.
+- Added logs for candidate name, COM type, color read attempt, and geometry type.
+- Kept drawing SaveAs flow even when color detection is unsupported or inconclusive.
+- Did not create Drawing Dimensions in this step.
 
 ## [0.0.21] - STEP 6A Direction Update For Color Based Dimension Targets
 
@@ -12,18 +26,3 @@
 - Manually verified CATIA API generated TOP_VIEW and RIGHT_VIEW as Projection View icons in CATIA tree.
 - Confirmed FRONT_VIEW, TOP_VIEW, and RIGHT_VIEW update after source 3D model change and drawing update.
 - Kept independent generative TOP_VIEW/RIGHT_VIEW as fallback.
-
-## [0.0.19] - STEP 5A CATIA API Projection View Experiment
-
-- Added CATIA API based Projection View experiment path.
-- Kept independent generative TOP_VIEW/RIGHT_VIEW generation as fallback.
-- Added logs to distinguish API success, API candidate requiring manual verification, API failure with fallback, and total failure.
-- Documented that unverified Projection API behavior must not replace the stable fallback.
-
-## [0.0.18] - Roadmap Update Toward Marker Based Dimensions
-
-- Reframed project roadmap around marker based basic views and partial dimension generation.
-- Marked view layout automation, PDF export, Detail View, Section View, and title block automation as deferred.
-- Kept independent generative TOP_VIEW/RIGHT_VIEW generation as the current stable fallback.
-- Added STEP 5A for future CATIA API based Projection View experiments.
-- Promoted marker based partial dimension generation as the next major functional direction.

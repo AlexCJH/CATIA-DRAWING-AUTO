@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using CatiaAutoDrawing.Core;
+using CatiaAutoDrawing.DimensionGenerator;
 using CatiaAutoDrawing.Logging;
 using CatiaAutoDrawing.Utils;
 using CatiaAutoDrawing.ViewGenerator;
@@ -18,16 +19,18 @@ public sealed class DrawingGenerator : IDrawingGenerator
 
     private readonly ILogger _logger;
     private readonly IViewGenerator _viewGenerator;
+    private readonly IDimensionGenerator _dimensionGenerator;
 
     public DrawingGenerator(ILogger logger)
-        : this(logger, new ViewGenerator.ViewGenerator(logger))
+        : this(logger, new ViewGenerator.ViewGenerator(logger), new DimensionGenerator.DimensionGenerator(logger))
     {
     }
 
-    public DrawingGenerator(ILogger logger, IViewGenerator viewGenerator)
+    public DrawingGenerator(ILogger logger, IViewGenerator viewGenerator, IDimensionGenerator dimensionGenerator)
     {
         _logger = logger;
         _viewGenerator = viewGenerator;
+        _dimensionGenerator = dimensionGenerator;
     }
 
     public Result<string> Generate(DrawingGenerationContext context)
@@ -119,11 +122,30 @@ public sealed class DrawingGenerator : IDrawingGenerator
                 context.ViewRotation);
 
             Result projectionViewResult = Result.Success();
+            Result dimensionDetectionResult = Result.Success();
+            Result dimensionGenerationResult = Result.Success();
+
             if (frontViewResult.IsSuccess)
             {
                 _logger.Info("STEP 4 succeeded.");
                 projectionViewResult = _viewGenerator.GenerateProjectionViews(drawingDocument, activeDocument);
             }
+
+            if (projectionViewResult.IsSuccess)
+            {
+                dimensionDetectionResult = _dimensionGenerator.DetectColorBasedTargets(activeDocument);
+                if (!dimensionDetectionResult.IsSuccess)
+                {
+                    _logger.Warning(dimensionDetectionResult.ErrorMessage ?? "STEP 6A color based dimension target detection was inconclusive.");
+                }
+
+                dimensionGenerationResult = _dimensionGenerator.GenerateColorBasedSurfaceDistanceDimension(drawingDocument, activeDocument);
+                if (!dimensionGenerationResult.IsSuccess)
+                {
+                    _logger.Warning(dimensionGenerationResult.ErrorMessage ?? "STEP 6B dimension generation failed, but drawing generation will continue.");
+                }
+            }
+
             var outputFolder = ResolveOutputFolder(context.OutputFolder);
             Directory.CreateDirectory(outputFolder);
 
@@ -148,6 +170,16 @@ public sealed class DrawingGenerator : IDrawingGenerator
                 var message = projectionViewResult.ErrorMessage ?? "Projection view generation failed.";
                 _logger.Warning("STEP 5A failed, but drawing template copy was saved.");
                 return Result<string>.Failure(message);
+            }
+
+            if (dimensionDetectionResult.IsSuccess)
+            {
+                _logger.Info("STEP 6A completed.");
+            }
+
+            if (dimensionGenerationResult.IsSuccess)
+            {
+                _logger.Info("STEP 6B completed.");
             }
 
             _logger.Info("Projection view step completed.");

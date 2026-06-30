@@ -1,4 +1,4 @@
-namespace CatiaAutoDrawing.DimensionGenerator;
+﻿namespace CatiaAutoDrawing.DimensionGenerator;
 
 /// <summary>
 /// Role: Defines dimension generation contract.
@@ -7,4 +7,6 @@ namespace CatiaAutoDrawing.DimensionGenerator;
 public interface IDimensionGenerator
 {
     DimensionPlan CreateDimensionPlan(object catiaDocument);
+    CatiaAutoDrawing.Core.Result DetectColorBasedTargets(object sourceDocument);
+    CatiaAutoDrawing.Core.Result GenerateColorBasedSurfaceDistanceDimension(object drawingDocument, object sourceDocument);
 }
