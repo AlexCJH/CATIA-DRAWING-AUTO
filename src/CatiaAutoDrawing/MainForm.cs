@@ -2,9 +2,12 @@
 using System.Windows.Forms;
 using CatiaAutoDrawing.CatiaConnection;
 using CatiaAutoDrawing.Config;
+using CatiaAutoDrawing.DimensionGenerator;
 using CatiaAutoDrawing.DrawingGenerator;
 using CatiaAutoDrawing.Logging;
 using CatiaAutoDrawing.ModelInspector;
+using CatiaAutoDrawing.UserPrompt;
+using CatiaAutoDrawing.ViewGenerator;
 
 namespace CatiaAutoDrawing;
 
@@ -38,7 +41,11 @@ public partial class MainForm : Form
 
         _catiaConnectionService = new CatiaConnectionService(_logger);
         _modelInspector = new ModelInspector.ModelInspector(_logger);
-        _drawingGenerator = new DrawingGenerator.DrawingGenerator(_logger);
+        _drawingGenerator = new DrawingGenerator.DrawingGenerator(
+            _logger,
+            new ViewGenerator.ViewGenerator(_logger),
+            new DimensionGenerator.DimensionGenerator(_logger),
+            new MessageBoxUserPromptService(this));
 
         drawingSizeComboBox.SelectedItem = _settings.DefaultSheetSize;
         if (drawingSizeComboBox.SelectedIndex < 0)
@@ -147,12 +154,3 @@ public partial class MainForm : Form
         logTextBox.AppendText(message + Environment.NewLine);
     }
 }
-
-
-
-
-
-
-
-
-

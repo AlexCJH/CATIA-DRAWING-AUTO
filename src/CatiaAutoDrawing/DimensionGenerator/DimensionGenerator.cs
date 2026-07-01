@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -108,7 +108,7 @@ public sealed class DimensionGenerator : IDimensionGenerator
                 return Result.Failure(message);
             }
 
-            _logger.Info("FRONT_VIEW acquired for dimension generation.");
+            _logger.Info("FRONT_VIEW acquired for manual dimension diagnostics.");
 
             _logger.Info("Dimension reference 1 creation started.");
             var reference1 = InvokeComMethod(context.Part, "CreateReferenceFromObject", redSurfaceTargets[0].Candidate);
@@ -131,38 +131,9 @@ public sealed class DimensionGenerator : IDimensionGenerator
             }
 
             _logger.Info("Dimension reference 2 creation succeeded.");
-            _logger.Info("Surface-to-surface distance dimension API experiment started.");
 
-            const string dimensionMethod = "DrawingDimensions.Add2(distanceType=0, geometryElements[2], pickPoints[4], lineRepresentation=0)";
-            _logger.Info($"Dimension creation method: {dimensionMethod}");
-
-            var dimension = TryCreateSurfaceDistanceDimension(frontView, reference1, reference2);
-            if (dimension is null)
-            {
-                const string message = "STEP 6B dimension generation failed, but drawing generation will continue.";
-                _logger.Warning(message);
-                return Result.Failure(message);
-            }
-
-            _logger.Info("Surface-to-surface distance dimension generated successfully.");
-
-            try
-            {
-                SetComProperty(dimension, "Name", SurfaceDistanceDimensionName);
-                _logger.Info($"Dimension name set: {SurfaceDistanceDimensionName}");
-            }
-            catch (Exception ex)
-            {
-                LogWarningWithException("Dimension name set failed.", ex);
-            }
-
-            var sheet = GetFirstSheet(drawingDocument);
-            if (sheet is not null)
-            {
-                TryInvokeComMethod(sheet, "Update");
-            }
-
-            _logger.Info("STEP 6B color based distance dimension generation completed.");
+            RunManualDimensionDiagnostics(frontView, sourceDocument);
+            _logger.Info("STEP 6B-4 manual dimension diagnostics completed.");
             return Result.Success();
         }
         catch (Exception ex)
@@ -382,36 +353,204 @@ public sealed class DimensionGenerator : IDimensionGenerator
         return result;
     }
 
-    private object? TryCreateSurfaceDistanceDimension(object frontView, object reference1, object reference2)
+    private void RunManualDimensionDiagnostics(object frontView, object sourceDocument)
     {
+        _logger.Info("STEP 6B-4 manual dimension diagnostics started.");
+        _logger.Info("FRONT_VIEW acquired for manual dimension diagnostics.");
+
         var dimensions = TryGetComProperty(frontView, "Dimensions");
         if (dimensions is null)
         {
-            _logger.Warning("STEP 6B dimension generation failed, but drawing generation will continue.");
-            _logger.Warning("Root cause: FRONT_VIEW dimensions collection does not exist.");
-            return null;
+            _logger.Warning("FRONT_VIEW Dimensions collection could not be acquired.");
+            return;
+        }
+
+        _logger.Info("FRONT_VIEW Dimensions collection acquired.");
+        var dimensionCount = TryGetCollectionCount(dimensions);
+        _logger.Info($"Manual dimension count: {dimensionCount}");
+        if (dimensionCount == 0)
+        {
+            _logger.Warning("Manual dimension count is zero.");
+            return;
+        }
+
+        var selection = TryGetComProperty(sourceDocument, "Selection");
+        for (var index = 1; index <= dimensionCount; index++)
+        {
+            var dimension = InvokeComMethod(dimensions, "Item", index);
+            if (dimension is null)
+            {
+                continue;
+            }
+
+            _logger.Info("Manual dimension candidate found.");
+            var dimensionName = Convert.ToString(TryGetComProperty(dimension, "Name")) ?? $"Dimension_{index}";
+            var dimensionType = dimension.GetType().FullName ?? dimension.GetType().Name;
+            _logger.Info($"Dimension name: {dimensionName}");
+            _logger.Info($"Dimension COM type: {dimensionType}");
+            _logger.Info($"Dimension CATIA name: {dimensionName}");
+
+            LogDimensionPropertyProbe(dimension, "Name");
+            LogDimensionPropertyProbe(dimension, "Type");
+            LogDimensionPropertyProbe(dimension, "Value");
+            LogDimensionPropertyProbe(dimension, "DimType");
+            LogDimensionPropertyProbe(dimension, "Parameters");
+            LogDimensionPropertyProbe(dimension, "Parent");
+            LogDimensionPropertyProbe(dimension, "GenerativeLinks");
+            LogDimensionPropertyProbe(dimension, "GeometryElements");
+            LogDimensionPropertyProbe(dimension, "ValueFrame");
+            LogDimensionMethodProbe(dimension, "GetValue");
+
+            var selectionAddSucceeded = TrySelectionAdd(selection, dimension);
+            _logger.Info($"Dimension selection add: {selectionAddSucceeded}");
+
+            _logger.Info("Dimension linked geometry probe started.");
+            var linkedGeometryConfirmed = false;
+            linkedGeometryConfirmed |= LogDimensionLinkedCollection(dimension, "GeometryElements");
+            linkedGeometryConfirmed |= LogDimensionLinkedCollection(dimension, "GenerativeLinks");
+            linkedGeometryConfirmed |= LogDimensionLinkedCollection(dimension, "Parameters");
+
+            if (!linkedGeometryConfirmed)
+            {
+                _logger.Warning("Dimension linked geometry could not be confirmed.");
+            }
+        }
+    }
+
+    private void LogDimensionPropertyProbe(object dimension, string propertyName)
+    {
+        try
+        {
+            var value = GetComProperty(dimension, propertyName);
+            _logger.Info($"Dimension property probe: {propertyName} => {DescribeComValue(value)}");
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning($"Dimension property probe failed: {propertyName}");
+            var rootCause = ExceptionUtils.GetRootCause(ex);
+            var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
+            _logger.Warning($"Root cause: {rootCause.Message}");
+            if (!string.IsNullOrWhiteSpace(comErrorCode))
+            {
+                _logger.Warning($"Root COM error: {comErrorCode}");
+            }
+        }
+    }
+
+    private void LogDimensionMethodProbe(object dimension, string methodName)
+    {
+        try
+        {
+            var value = InvokeComMethod(dimension, methodName);
+            _logger.Info($"Dimension property probe: {methodName}() => {DescribeComValue(value)}");
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning($"Dimension property probe failed: {methodName}");
+            var rootCause = ExceptionUtils.GetRootCause(ex);
+            var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
+            _logger.Warning($"Root cause: {rootCause.Message}");
+            if (!string.IsNullOrWhiteSpace(comErrorCode))
+            {
+                _logger.Warning($"Root COM error: {comErrorCode}");
+            }
+        }
+    }
+
+    private bool LogDimensionLinkedCollection(object dimension, string propertyName)
+    {
+        try
+        {
+            var collection = TryGetComProperty(dimension, propertyName);
+            if (collection is null)
+            {
+                return false;
+            }
+
+            var count = TryGetCollectionCount(collection);
+            if (count <= 0)
+            {
+                return false;
+            }
+
+            var found = false;
+            for (var index = 1; index <= Math.Min(count, 10); index++)
+            {
+                var item = InvokeComMethod(collection, "Item", index);
+                if (item is null)
+                {
+                    continue;
+                }
+
+                found = true;
+                var name = Convert.ToString(TryGetComProperty(item, "Name")) ?? $"{propertyName}_{index}";
+                var type = item.GetType().FullName ?? item.GetType().Name;
+                _logger.Info($"Dimension linked geometry candidate: {propertyName}/{name} ({type})");
+            }
+
+            return found;
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning($"Dimension property probe failed: {propertyName}.Item");
+            var rootCause = ExceptionUtils.GetRootCause(ex);
+            var comErrorCode = ExceptionUtils.GetComErrorCode(ex);
+            _logger.Warning($"Root cause: {rootCause.Message}");
+            if (!string.IsNullOrWhiteSpace(comErrorCode))
+            {
+                _logger.Warning($"Root COM error: {comErrorCode}");
+            }
+
+            return false;
+        }
+    }
+
+    private static int TryGetCollectionCount(object collection)
+    {
+        var countObject = TryGetComProperty(collection, "Count");
+        return countObject is null ? 0 : Convert.ToInt32(countObject);
+    }
+
+    private bool TrySelectionAdd(object? selection, object item)
+    {
+        if (selection is null)
+        {
+            return false;
         }
 
         try
         {
-            var geometryElements = new object[] { reference1, reference2 };
-            var pickPoints = new object[] { 50.0, 50.0, 140.0, 140.0 };
-            const int distanceDimensionType = 0;
-            const int lineRepresentation = 0;
-
-            return InvokeComMethod(
-                dimensions,
-                "Add2",
-                distanceDimensionType,
-                geometryElements,
-                pickPoints,
-                lineRepresentation);
+            TryInvokeComMethod(selection, "Clear");
+            InvokeComMethod(selection, "Add", item);
+            return true;
         }
-        catch (Exception ex)
+        catch
         {
-            LogWarningWithException("STEP 6B dimension generation failed, but drawing generation will continue.", ex);
-            return null;
+            return false;
         }
+        finally
+        {
+            TryInvokeComMethod(selection, "Clear");
+        }
+    }
+
+    private static string DescribeComValue(object? value)
+    {
+        if (value is null)
+        {
+            return "<null>";
+        }
+
+        if (value is string || value.GetType().IsPrimitive || value is decimal)
+        {
+            return value.ToString() ?? value.GetType().Name;
+        }
+
+        var name = Convert.ToString(TryGetComProperty(value, "Name"));
+        var type = value.GetType().FullName ?? value.GetType().Name;
+        return string.IsNullOrWhiteSpace(name)
+            ? type
+            : $"{name} ({type})";
     }
 
     private static bool IsSurfaceLike(string geometryType, string candidateType, string candidateName)
@@ -855,6 +994,16 @@ public sealed class DimensionGenerator : IDimensionGenerator
             args: args);
     }
 
+    private static object? InvokeComMethodExactArgs(object comObject, string methodName, object[] args)
+    {
+        return comObject.GetType().InvokeMember(
+            methodName,
+            BindingFlags.InvokeMethod,
+            binder: null,
+            target: comObject,
+            args: args);
+    }
+
     private static void TryInvokeComMethod(object comObject, string methodName, params object[] args)
     {
         try
@@ -875,6 +1024,13 @@ public sealed class DimensionGenerator : IDimensionGenerator
         string CandidateType,
         string ColorGroup,
         string GeometryType);
+
+    private sealed record GeneratedGeometryCandidate(
+        object GeometryItem,
+        string CandidateName,
+        string CandidateType,
+        object? Reference,
+        string? SourceLink);
 
     private sealed record DimensionTargetContext(
         object Part,

@@ -1,5 +1,23 @@
 ﻿# Changelog
 
+## [0.0.28] - STEP 6B Manual Dimension Input Pause
+
+- Added a user pause before manual dimension diagnostics.
+- Allows the user to create manual dimensions in CATIA before the program reads FRONT_VIEW.Dimensions.
+- Kept automatic dimension creation disabled.
+
+## [0.0.27] - STEP 6B Manual Dimension Object Diagnostics
+
+- Added diagnostics for manually created Drawing Dimension objects.
+- Investigated Dimension object properties and linked geometry after Add2 and generated geometry reference attempts failed.
+- Did not create Drawing Dimensions in this step.
+
+## [0.0.26] - STEP 6B Drawing View Generated Geometry Diagnostics
+
+- Added diagnostics for FRONT_VIEW generated geometry references.
+- Investigated whether Drawing Dimension API requires 2D generated geometry instead of direct 3D references.
+- Kept RED surface target detection and SaveAs flow stable.
+
 ## [0.0.24] - STEP 6B Color Based Surface Distance Dimension Experiment
 
 - Added first Drawing Dimension API experiment using two RED Surface/Face dimension targets.

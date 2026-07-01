@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using CatiaAutoDrawing.Core;
 using CatiaAutoDrawing.DimensionGenerator;
 using CatiaAutoDrawing.Logging;
+using CatiaAutoDrawing.UserPrompt;
 using CatiaAutoDrawing.Utils;
 using CatiaAutoDrawing.ViewGenerator;
 
@@ -20,17 +21,27 @@ public sealed class DrawingGenerator : IDrawingGenerator
     private readonly ILogger _logger;
     private readonly IViewGenerator _viewGenerator;
     private readonly IDimensionGenerator _dimensionGenerator;
+    private readonly IUserPromptService _userPromptService;
 
     public DrawingGenerator(ILogger logger)
-        : this(logger, new ViewGenerator.ViewGenerator(logger), new DimensionGenerator.DimensionGenerator(logger))
+        : this(
+            logger,
+            new ViewGenerator.ViewGenerator(logger),
+            new DimensionGenerator.DimensionGenerator(logger),
+            new NoOpUserPromptService())
     {
     }
 
-    public DrawingGenerator(ILogger logger, IViewGenerator viewGenerator, IDimensionGenerator dimensionGenerator)
+    public DrawingGenerator(
+        ILogger logger,
+        IViewGenerator viewGenerator,
+        IDimensionGenerator dimensionGenerator,
+        IUserPromptService userPromptService)
     {
         _logger = logger;
         _viewGenerator = viewGenerator;
         _dimensionGenerator = dimensionGenerator;
+        _userPromptService = userPromptService;
     }
 
     public Result<string> Generate(DrawingGenerationContext context)
@@ -138,11 +149,25 @@ public sealed class DrawingGenerator : IDrawingGenerator
                 {
                     _logger.Warning(dimensionDetectionResult.ErrorMessage ?? "STEP 6A color based dimension target detection was inconclusive.");
                 }
-
-                dimensionGenerationResult = _dimensionGenerator.GenerateColorBasedSurfaceDistanceDimension(drawingDocument, activeDocument);
-                if (!dimensionGenerationResult.IsSuccess)
+                else
                 {
-                    _logger.Warning(dimensionGenerationResult.ErrorMessage ?? "STEP 6B dimension generation failed, but drawing generation will continue.");
+                    _logger.Info("Manual dimension input pause started.");
+                    _logger.Info("Waiting for user to create manual dimensions in CATIA.");
+
+                    if (_userPromptService.ConfirmManualDimensionInput())
+                    {
+                        _logger.Info("User confirmed manual dimension input completed.");
+                        dimensionGenerationResult = _dimensionGenerator.GenerateColorBasedSurfaceDistanceDimension(drawingDocument, activeDocument);
+                        if (!dimensionGenerationResult.IsSuccess)
+                        {
+                            _logger.Warning(dimensionGenerationResult.ErrorMessage ?? "STEP 6B manual dimension diagnostics failed, but drawing generation will continue.");
+                        }
+                    }
+                    else
+                    {
+                        _logger.Warning("User cancelled manual dimension diagnostics.");
+                        dimensionGenerationResult = Result.Failure("User cancelled manual dimension diagnostics.");
+                    }
                 }
             }
 
@@ -355,4 +380,12 @@ public sealed class DrawingGenerator : IDrawingGenerator
         ref Guid rclsid,
         IntPtr pvReserved,
         [MarshalAs(UnmanagedType.IUnknown)] out object ppunk);
+
+    private sealed class NoOpUserPromptService : IUserPromptService
+    {
+        public bool ConfirmManualDimensionInput()
+        {
+            return false;
+        }
+    }
 }
